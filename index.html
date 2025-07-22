@@ -139,6 +139,44 @@ Sobre toda, humanidad y ley..."></textarea>
             <div id="chord-inspector-piano"></div>
         </div>
 
+        <!-- Chord Replacement Modal -->
+        <div id="chord-replacement-overlay" class="modal-overlay"></div>
+        <div id="chord-replacement-modal" class="modal-content">
+            <div class="modal-header">
+                <h3>Reemplazar Acorde</h3>
+                <button id="chord-replacement-close-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="controls">
+                    <div class="select-wrapper">
+                        <label for="replacement-root-note-select">Nota Raíz</label>
+                        <select id="replacement-root-note-select"></select>
+                    </div>
+                    <div class="select-wrapper">
+                        <label for="replacement-type-select">Tipo de Acorde</label>
+                        <select id="replacement-type-select"></select>
+                    </div>
+                    <div class="select-wrapper">
+                        <label for="replacement-bass-note-select">Bajo en (Opcional)</label>
+                        <select id="replacement-bass-note-select"></select>
+                    </div>
+                    <div class="select-wrapper">
+                        <label for="replacement-inversion-select">Inversión</label>
+                        <select id="replacement-inversion-select"></select>
+                    </div>
+                </div>
+                <div id="replacement-piano-container" class="piano-container">
+                    <div class="piano" aria-label="Piano virtual">
+                        <!-- Piano keys will be generated here -->
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button id="replacement-play-btn" class="button-secondary">Probar</button>
+                    <button id="replacement-confirm-btn" class="button-primary">Reemplazar</button>
+                </div>
+            </div>
+        </div>
+
     </div>
     <script type="module" src="index.tsx"></script>
 <script type="module" src="/index.tsx"></script>

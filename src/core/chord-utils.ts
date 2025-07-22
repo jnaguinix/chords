@@ -237,6 +237,37 @@ export function applyTransposition(originalSong: ProcessedSong, transpositionOff
     return transposedSong;
 }
 
+export function getNotesForChordString(chordString: string): string[] {
+    const parsedChord = parseChordString(chordString);
+    if (!parsedChord) {
+        return [];
+    }
+    const { notesToPress, bassNoteIndex } = getChordNotes(parsedChord);
+
+    const allNotes: number[] = [...notesToPress];
+    if (bassNoteIndex !== null) {
+        allNotes.push(bassNoteIndex);
+    }
+
+    // Convert MIDI indices to note names (e.g., 'C4')
+    return allNotes.map(midiIndex => {
+        const noteName = INDEX_TO_DISPLAY_NAME[midiIndex % 12];
+        const octave = Math.floor(midiIndex / 12) - 1; // MIDI 0 is C-1, so C4 is MIDI 60
+        return `${noteName}${octave}`;
+    }).sort((a, b) => {
+        // Sort notes to ensure consistent order (e.g., C4, E4, G4)
+        const noteAIndex = NOTE_TO_INDEX[a.slice(0, -1)];
+        const octaveA = parseInt(a.slice(-1), 10);
+        const noteBIndex = NOTE_TO_INDEX[b.slice(0, -1)];
+        const octaveB = parseInt(b.slice(-1), 10);
+
+        if (octaveA !== octaveB) {
+            return octaveA - octaveB;
+        }
+        return noteAIndex - noteBIndex;
+    });
+}
+
 /**
  * Calcula un rango de piano óptimo para visualizar un conjunto de notas.
  * Asegura un número mínimo de teclas y centra el acorde.
