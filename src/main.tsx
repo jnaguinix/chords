@@ -86,6 +86,8 @@ class PianoApp {
                 transposeUpBtn: document.getElementById('composer-transpose-up-btn') as HTMLButtonElement,
                 transposeDownBtn: document.getElementById('composer-transpose-down-btn') as HTMLButtonElement,
                 transpositionDisplay: document.getElementById('composer-transposition-display')!,
+                exportBtn: document.getElementById('export-song-btn') as HTMLButtonElement, // Nuevo: Botón de exportar
+                importBtn: document.getElementById('import-song-btn') as HTMLButtonElement, // Nuevo: Botón de importar
             },
             this.showChordInspector,
             this.audioEngine

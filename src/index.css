@@ -414,12 +414,29 @@ select {
     border-color: var(--accent-yellow-hover);
 }
 
-#composer-transposition-controls span {
-    color: var(--text-main);
-    font-weight: 500;
-    font-size: 0.9em; /* Ajustar tamaño de fuente para que coincida con los botones */
-    min-width: 80px; /* Reservar espacio fijo para el texto, ajustado para 'Original' */
-    text-align: center; /* Centrar el texto */
+/* Estilos para el botón de Exportar */
+.button-export {
+    background-color: var(--black); /* Fondo negro */
+    color: var(--white); /* Texto blanco */
+    border: 1px solid var(--black);
+}
+
+.button-export:hover:not(:disabled) {
+    background-color: var(--grey); /* Un gris más claro en hover */
+    border-color: var(--grey);
+}
+
+/* Estilos para el botón de Importar */
+.button-import {
+    background-color: var(--white); /* Fondo blanco */
+    color: var(--black); /* Texto negro */
+    border: 1px solid var(--white);
+}
+
+.button-import:hover:not(:disabled) {
+    background-color: var(--text-muted-color); /* Un gris más oscuro en hover */
+    border-color: var(--text-muted-color);
+    color: var(--white); /* Texto blanco en hover */
 }
 
 /* --- Extractor Mode Styles --- */

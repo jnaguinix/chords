@@ -14,6 +14,8 @@ interface ComposerDOMElements {
     transposeUpBtn: HTMLButtonElement;
     transposeDownBtn: HTMLButtonElement;
     transpositionDisplay: HTMLElement;
+    exportBtn: HTMLButtonElement; // Nuevo: Botón para exportar
+    importBtn: HTMLButtonElement; // Nuevo: Botón para importar
 }
 
 export class Composer {
@@ -45,10 +47,12 @@ export class Composer {
         this.currentSong = song;
         const maxId = Math.max(0, ...song.allChords.map(c => c.id || 0));
         this.nextChordId = maxId + 1;
+        this.currentTransposition = 0; // Resetear transposición al cargar una nueva canción
         // Actualizar la propiedad 'raw' de cada acorde para reflejar la transposición actual
         this.currentSong.allChords.forEach(chord => {
             chord.raw = formatChordName(chord, { style: 'short' }, this.currentTransposition);
         });
+        this.updateTranspositionDisplay(); // Actualizar display de transposición
         this.render();
     }
     
@@ -58,7 +62,49 @@ export class Composer {
         this.elements.compositionOutput.addEventListener('click', this.handleInsertionClick);
         this.elements.transposeUpBtn.addEventListener('click', () => this.transposeSong(1));
         this.elements.transposeDownBtn.addEventListener('click', () => this.transposeSong(-1));
+        this.elements.exportBtn.addEventListener('click', this.handleExportSong); // Nuevo: Exportar canción
+        this.elements.importBtn.addEventListener('click', this.handleImportSong); // Nuevo: Importar canción
     }
+
+    private handleExportSong = (): void => {
+        if (!this.currentSong) {
+            alert('No hay canción para exportar.');
+            return;
+        }
+        const songJson = JSON.stringify(this.currentSong, null, 2);
+        const blob = new Blob([songJson], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'my_song.chordsong'; // Nombre de archivo por defecto
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
+    private handleImportSong = (): void => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.chordsong,.json'; // Aceptar extensiones .chordsong y .json
+        input.onchange = async (event) => {
+            const file = (event.target as HTMLInputElement).files?.[0];
+            if (file) {
+                try {
+                    const content = await file.text();
+                    const importedSong = JSON.parse(content);
+                    // Aquí podrías añadir validación adicional para asegurar que importedSong
+                    // tiene la estructura de ProcessedSong
+                    this.setSong(importedSong);
+                    alert('Canción importada exitosamente.');
+                } catch (error) {
+                    alert('Error al importar la canción: ' + error.message);
+                    console.error('Error importing song:', error);
+                }
+            }
+        };
+        input.click();
+    };
 
     private transposeSong = (semitones: number): void => {
         if (!this.currentSong) return;
