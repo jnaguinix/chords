@@ -7,10 +7,13 @@ import type { AudioEngine } from '../core/audio';
 
 // La interfaz ahora incluye el nuevo piano display
 interface ComposerDOMElements {
-    clearSequenceBtn: HTMLButtonElement;
     compositionOutput: HTMLElement;
     insertionIndicator: HTMLElement; 
     composerPianoDisplay: HTMLElement; // <-- Piano persistente
+    transpositionControls: HTMLElement;
+    transposeUpBtn: HTMLButtonElement;
+    transposeDownBtn: HTMLButtonElement;
+    transpositionDisplay: HTMLElement;
 }
 
 export class Composer {
@@ -20,6 +23,7 @@ export class Composer {
     private currentSong: ProcessedSong | null = null;
     private nextChordId = 1;
     private currentInsertingChordId: number | null = null; 
+    private currentTransposition = 0; // 0 = Tonalidad Original
 
     constructor(
         elements: ComposerDOMElements, 
@@ -29,6 +33,7 @@ export class Composer {
         this.elements = elements;
         this.showInspector = showInspector;
         this.audioEngine = audioEngine;
+        this.updateTranspositionDisplay();
     }
 
     public init(): void {
@@ -40,20 +45,54 @@ export class Composer {
         this.currentSong = song;
         const maxId = Math.max(0, ...song.allChords.map(c => c.id || 0));
         this.nextChordId = maxId + 1;
+        // Actualizar la propiedad 'raw' de cada acorde para reflejar la transposición actual
+        this.currentSong.allChords.forEach(chord => {
+            chord.raw = formatChordName(chord, { style: 'short' }, this.currentTransposition);
+        });
         this.render();
     }
     
     private addEventListeners(): void {
-        this.elements.clearSequenceBtn.addEventListener('click', this.handleClearSequence);
         this.elements.compositionOutput.addEventListener('mousemove', this.handleMouseMove);
         this.elements.compositionOutput.addEventListener('mouseleave', this.handleMouseLeave);
         this.elements.compositionOutput.addEventListener('click', this.handleInsertionClick);
+        this.elements.transposeUpBtn.addEventListener('click', () => this.transposeSong(1));
+        this.elements.transposeDownBtn.addEventListener('click', () => this.transposeSong(-1));
     }
+
+    private transposeSong = (semitones: number): void => {
+        if (!this.currentSong) return;
+
+        this.currentTransposition += semitones;
+        // Asegurarse de que la transposición se mantenga dentro de un rango razonable, por ejemplo, -12 a +12
+        if (this.currentTransposition > 12) this.currentTransposition = 12;
+        if (this.currentTransposition < -12) this.currentTransposition = -12;
+
+        // Actualizar la propiedad 'raw' de cada acorde para reflejar la transposición
+        this.currentSong.allChords.forEach(chord => {
+            chord.raw = formatChordName(chord, { style: 'short' }, this.currentTransposition);
+        });
+
+        this.updateTranspositionDisplay();
+        this.render();
+    };
+
+    private updateTranspositionDisplay = (): void => {
+        let text = 'Original';
+        if (this.currentTransposition > 0) {
+            text = `+${this.currentTransposition}`;
+        } else if (this.currentTransposition < 0) {
+            text = `${this.currentTransposition}`;
+        }
+        this.elements.transpositionDisplay.textContent = text;
+    };
 
     private handleClearSequence = (): void => {
         this.currentSong = { lines: [], allChords: [] };
         this.nextChordId = 1;
+        this.currentTransposition = 0; // Resetear transposición al limpiar
         this.elements.composerPianoDisplay.innerHTML = ''; // Limpia el piano
+        this.updateTranspositionDisplay(); // Actualizar display de transposición
         this.render();
     };
 
@@ -144,7 +183,7 @@ export class Composer {
     private addChordToSongData(item: SequenceItem, target: { lineIndex: number; charIndex: number }) {
         if (!this.currentSong || item.id === undefined || !target) return;
         
-        const newItem = { ...item, raw: formatChordName(item, { style: 'short' }) };
+        const newItem = { ...item, raw: formatChordName(item, { style: 'short' }, this.currentTransposition) };
         const targetLine = this.currentSong.lines[target.lineIndex];
         if (targetLine) {
             const safePosition = Math.min(target.charIndex, targetLine.lyrics.length);
@@ -162,7 +201,7 @@ export class Composer {
         const chordToUpdate = this.currentSong.allChords.find(c => c.id === updatedItem.id);
         if (chordToUpdate) {
             Object.assign(chordToUpdate, updatedItem);
-            chordToUpdate.raw = formatChordName(chordToUpdate, { style: 'short' });
+            chordToUpdate.raw = formatChordName(chordToUpdate, { style: 'short' }, this.currentTransposition);
             for (const line of this.currentSong.lines) {
                 const songChordToUpdate = line.chords.find(sc => sc.chord.id === updatedItem.id);
                 if (songChordToUpdate) { songChordToUpdate.chord = chordToUpdate; break; }
@@ -180,7 +219,7 @@ export class Composer {
     }
 
     private updateDisplayPiano(item: SequenceItem): void {
-        const { notesToPress, bassNoteIndex, allNotesForRange } = getChordNotes(item);
+        const { notesToPress, bassNoteIndex, allNotesForRange } = getChordNotes(item, this.currentTransposition);
         if (allNotesForRange.length > 0) {
             const { startNote, endNote } = calculateOptimalPianoRange(allNotesForRange, 15, 2);
             createPiano(this.elements.composerPianoDisplay, startNote, endNote, notesToPress, true, bassNoteIndex);
@@ -190,7 +229,7 @@ export class Composer {
     }
 
     private onShortClick = (item: SequenceItem): void => {
-        this.audioEngine.playChord(item);
+        this.audioEngine.playChord(item, this.currentTransposition);
         this.updateDisplayPiano(item);
     }
 
@@ -202,7 +241,7 @@ export class Composer {
                 this.render();
             },
             onDelete: this.handleDeleteChord
-        });
+        }, this.currentTransposition);
     }
     
     private render(): void {
@@ -220,7 +259,7 @@ export class Composer {
         createSongSheet(this.elements.compositionOutput, this.currentSong.lines, {
             onShortClick: this.onShortClick,
             onLongClick: this.onLongClick,
-            // 'isEditable' ha sido eliminado para corregir el error de TypeScript
+            transposition: this.currentTransposition, // Pasar la transposición actual
         });
     }
 }

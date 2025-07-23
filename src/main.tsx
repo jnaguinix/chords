@@ -76,11 +76,14 @@ class PianoApp {
         
         // --- BLOQUE CORREGIDO ---
         this.composer = new Composer({
-                clearSequenceBtn: document.getElementById('clear-sequence-btn') as HTMLButtonElement,
                 compositionOutput: document.getElementById('composition-output')!,
                 insertionIndicator: document.getElementById('chord-insertion-indicator')!,
-                // ¡LA LÍNEA QUE FALTABA!
                 composerPianoDisplay: document.getElementById('composer-piano-display')!,
+                // Nuevos elementos para transposición en el compositor
+                transpositionControls: document.getElementById('composer-transposition-controls')!,
+                transposeUpBtn: document.getElementById('composer-transpose-up-btn') as HTMLButtonElement,
+                transposeDownBtn: document.getElementById('composer-transpose-down-btn') as HTMLButtonElement,
+                transpositionDisplay: document.getElementById('composer-transposition-display')!,
             },
             this.showChordInspector,
             this.audioEngine

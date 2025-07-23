@@ -1,16 +1,20 @@
 :root {
-    --bg-main: #212120;
-    --bg-card: #303030;
-    --text-main: #F4F5FA;
-    --accent-green: #73a81c;
-    --accent-orange: #f5a623;
-    --white: #F6F8FA;
-    --black: #15181D;
-    --grey: #292929;
-    --shadow: 0 4px 24px rgba(41, 168, 28, 0.06);
-    --text-muted-color: #a0a0a0;
-    --interactive-blue: #8cb4ff;
-    --interactive-blue-hover: #a7c6ff;
+    --bg-main: #1A1A1A; /* Un poco más oscuro */
+    --bg-card: #2C2C2C; /* Ligeramente más claro que el fondo principal */
+    --text-main: #E0E0E0; /* Texto principal más suave */
+    --accent-green: #6B9F1A; /* Verde de acento más apagado */
+    --accent-orange: #E09A1F; /* Naranja de acento más apagado */
+    --accent-red: #C0392B; /* Nuevo color rojo de acento */
+    --accent-red-hover: #E74C3C; /* Hover del rojo de acento */
+    --accent-yellow: #F39C12; /* Nuevo color amarillo de acento */
+    --accent-yellow-hover: #F7DC6F; /* Hover del amarillo de acento */
+    --white: #F0F0F0; /* Blanco ligeramente más suave */
+    --black: #101010; /* Negro más profundo */
+    --grey: #3A3A3A; /* Gris más oscuro para bordes y separadores */
+    --shadow: 0 6px 20px rgba(0, 0, 0, 0.2); /* Sombra más difusa y pronunciada */
+    --text-muted-color: #909090; /* Texto muted más oscuro */
+    --interactive-blue: #418dcc; /* Azul interactivo ligeramente más brillante */
+    --interactive-blue-hover: #9AC0FF; /* Hover del azul interactivo */
 }
 
 *, *::before, *::after {
@@ -23,20 +27,24 @@ html {
 
 body {
     margin: 0;
-    font-family: 'IBM Plex Sans', sans-serif;
+    font-family: 'Victor Mono', monospace;
     color: var(--text-main);
     display: flex;
     justify-content: center;
     align-items: flex-start;
     min-height: 100vh;
-    padding: 20px;
+    padding: 40px 20px; /* Más padding en el body */
 }
 
 
 #app {
-    width: 95%;
-    max-width: 1400px;
+    width: 90%; /* Ligeramente más estrecho para mejor legibilidad */
+    max-width: 1200px; /* Reducir el ancho máximo */
     text-align: center;
+    padding: 30px; /* Más padding alrededor del contenido */
+    background-color: var(--bg-card); /* Fondo de tarjeta para el app */
+    border-radius: 15px; /* Bordes más redondeados para el contenedor principal */
+    box-shadow: var(--shadow); /* Aplicar la nueva sombra */
 }
 
 /* ============================================ */
@@ -44,10 +52,11 @@ body {
 /* ============================================ */
 
 header h1 {
-    font-size: 1.8rem;
+    font-size: 2rem; /* Tamaño de fuente ajustado */
     font-weight: 700;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.8rem; /* Más margen inferior */
     color: var(--accent-green);
+    font-family: 'Victor Mono', monospace; /* Forzar Victor Mono */
 }
 
 .description {
@@ -59,25 +68,37 @@ header h1 {
 /* ============================================ */
 
 .tabs {
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem; /* Más espacio debajo de las pestañas */
     border-bottom: 1px solid var(--grey);
 }
 
 .tab {
     font-size: 1.1rem;
     font-weight: 500;
-    padding: 10px 20px;
+    padding: 12px 22px; /* Más padding */
     background: none;
     border: none;
     color: var(--text-muted-color);
     cursor: pointer;
     border-bottom: 3px solid transparent;
-    transition: color 0.2s, border-color 0.2s;
+    transition: color 0.3s, border-color 0.3s, transform 0.1s, box-shadow 0.3s; /* Transiciones más suaves */
+}
+
+.tab:hover {
+    color: var(--white); /* Cambiar color de texto en hover */
+    transform: translateY(-2px); /* Ligero levantamiento */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Sombra sutil */
+}
+
+.tab:active {
+    transform: translateY(0); /* Efecto de "presión" */
+    box-shadow: none;
 }
 
 .tab.active {
     color: var(--accent-green);
     border-bottom-color: var(--accent-green);
+    font-weight: 700; /* Hacer la pestaña activa más negrita */
 }
 
 .mode-content { display: none; }
@@ -109,13 +130,19 @@ header h1 {
 select, textarea {
     font-size: 1rem;
     padding: 12px 16px;
-    border-radius: 8px;
+    border-radius: 10px; /* Ligeramente más redondeado */
     border: 1px solid var(--grey);
     background-color: var(--bg-card);
     color: var(--text-main);
     cursor: pointer;
     min-width: 180px;
-    transition: border-color 0.2s;
+    transition: border-color 0.3s, box-shadow 0.3s; /* Transiciones más suaves */
+}
+
+select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent-green);
+    box-shadow: 0 0 0 3px rgba(var(--accent-green), 0.3); /* Sombra al enfocar */
 }
 
 select {
@@ -128,35 +155,58 @@ select {
     background-size: 24px;
 }
 
-select:focus, textarea:focus {
-    outline: none;
-    border-color: var(--accent-green);
-}
-
 .button-primary, .button-secondary {
-    font-size: 1rem;
-    padding: 13px 20px;
-    border-radius: 8px;
+    font-size: 0.9em;
+    padding: 10px 12px;
+    border-radius: 10px;
     cursor: pointer;
     border: none;
-    transition: background-color 0.2s, opacity 0.2s;
+    transition: background-color 0.3s, opacity 0.3s, transform 0.1s;
     font-weight: 500;
+    font-family: 'Victor Mono', monospace;
 }
 
 .button-primary { background-color: var(--accent-green); color: var(--text-main); }
-.button-primary:hover:not(:disabled) { background-color: #8bc321; }
+.button-primary:hover:not(:disabled) { background-color: #7CBF20; transform: translateY(-1px); } /* Efecto hover sutil */
+.button-primary:active:not(:disabled) { transform: translateY(0); } /* Efecto click */
+
+#process-song-btn {
+    background-color: var(--interactive-blue);
+}
+#process-song-btn:hover:not(:disabled) {
+    background-color: var(--interactive-blue-hover);
+}
 
 .button-secondary { background-color: var(--bg-card); color: var(--text-main); border: 1px solid var(--grey); }
-.button-secondary:hover:not(:disabled) { background-color: var(--grey); }
+.button-secondary:hover:not(:disabled) { background-color: var(--grey); transform: translateY(-1px); }
+.button-secondary:active:not(:disabled) { transform: translateY(0); }
+
+#clear-extractor-btn {
+    background-color: var(--accent-red);
+    border-color: var(--accent-red);
+}
+#clear-extractor-btn:hover:not(:disabled) {
+    background-color: var(--accent-red-hover);
+    border-color: var(--accent-red-hover);
+}
 .button-primary:disabled, .button-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+#add-to-composer-btn {
+    background-color: var(--accent-green);
+    border-color: var(--accent-green);
+}
+#add-to-composer-btn:hover:not(:disabled) {
+    background-color: #7CBF20; /* Un verde ligeramente más brillante para el hover */
+    border-color: #7CBF20;
+}
 
 
 .chord-display-header {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 15px;
-    margin: 20px 0;
+    gap: 20px; /* Más espacio entre elementos */
+    margin: 30px 0; /* Margen ajustado */
 }
 
 #chord-name {
@@ -166,6 +216,7 @@ select:focus, textarea:focus {
     height: auto;
     margin: 0;
     transition: color 0.2s;
+    font-family: 'Victor Mono', monospace; /* Forzar Victor Mono */
 }
 
 #piano-container {
@@ -178,10 +229,10 @@ select:focus, textarea:focus {
     display: flex;
     margin: 40px 0;
     width: fit-content;
-    padding: 25px;
+    padding: 30px; /* Más padding */
     background: #1e1e1e;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    border-radius: 15px; /* Más redondeado */
+    box-shadow: var(--shadow); /* Usar la nueva sombra */
 }
 
 .piano .key {
@@ -301,17 +352,17 @@ select:focus, textarea:focus {
 }
 
 .piano-container-small .piano .white {
-    width: 38px;
-    height: 170px;
+    width: 30px; /* Reducir ancho */
+    height: 140px; /* Reducir alto */
 }
 
 .piano-container-small .piano .black {
-    width: 22px;
-    height: 105px;
+    width: 18px; /* Reducir ancho */
+    height: 85px; /* Reducir alto */
 }
 
 .piano-container-small .piano .white .black {
-    left: calc(38px - (22px / 2));
+    left: calc(30px - (18px / 2)); /* Ajustar posición */
 }
 
 .piano-container-small .piano .note-name {
@@ -324,6 +375,53 @@ select:focus, textarea:focus {
     gap: 10px;
 }
 
+#clear-sequence-btn {
+    background-color: var(--accent-red);
+    border-color: var(--accent-red);
+}
+#clear-sequence-btn:hover:not(:disabled) {
+    background-color: var(--accent-red-hover);
+    border-color: var(--accent-red-hover);
+}
+
+.composer-controls-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Espacio entre el botón Limpiar y los controles de transposición */
+    align-items: center; /* Centrar los elementos dentro del grupo */
+}
+
+#composer-transposition-controls.controls {
+    /* margin-top: 15px; Eliminado, el gap del padre lo maneja */
+    justify-content: center;
+    gap: 5px; /* Reducir el espacio entre los elementos */
+    align-items: center; /* Centrar verticalmente los elementos */
+}
+
+#composer-transposition-controls .button-secondary {
+    background-color: var(--accent-yellow);
+    border-color: var(--accent-yellow);
+    color: var(--black); /* Texto oscuro para el botón amarillo */
+}
+
+#composer-transposition-controls .button-secondary:hover:not(:disabled) {
+    background-color: var(--accent-yellow-hover);
+    border-color: var(--accent-yellow-hover);
+}
+
+#composer-transposition-controls .button-secondary:hover:not(:disabled) {
+    background-color: var(--accent-yellow-hover);
+    border-color: var(--accent-yellow-hover);
+}
+
+#composer-transposition-controls span {
+    color: var(--text-main);
+    font-weight: 500;
+    font-size: 0.9em; /* Ajustar tamaño de fuente para que coincida con los botones */
+    min-width: 80px; /* Reservar espacio fijo para el texto, ajustado para 'Original' */
+    text-align: center; /* Centrar el texto */
+}
+
 /* --- Extractor Mode Styles --- */
 #song-input {
     width: 100%;
@@ -333,9 +431,29 @@ select:focus, textarea:focus {
     border-radius: 8px;
     padding: 15px;
     color: var(--text-main);
-    font-family: 'IBM Plex Mono', monospace;
+    font-family: 'JetBrains Mono', monospace;
     font-size: 1rem;
     resize: vertical;
+}
+
+#song-input::-webkit-scrollbar {
+    width: 8px; /* Ancho del scrollbar vertical */
+    height: 8px; /* Alto del scrollbar horizontal */
+}
+
+#song-input::-webkit-scrollbar-track {
+    background: var(--bg-card); /* Color del fondo del track */
+    border-radius: 10px;
+}
+
+#song-input::-webkit-scrollbar-thumb {
+    background-color: var(--grey); /* Color del "pulgar" del scrollbar */
+    border-radius: 10px;
+    border: 2px solid var(--bg-card); /* Borde para que se vea más delgado */
+}
+
+#song-input::-webkit-scrollbar-thumb:hover {
+    background-color: var(--text-muted-color); /* Color al pasar el ratón */
 }
 
 .loader-container {
@@ -366,10 +484,10 @@ select:focus, textarea:focus {
 .song-sheet-container {
     text-align: left;
     background-color: var(--bg-card);
-    border-radius: 8px;
-    padding: 20px 30px;
-    margin-top: 20px;
-    font-family: 'IBM Plex Mono', monospace;
+    border-radius: 12px; /* Más redondeado */
+    padding: 25px 35px; /* Más padding */
+    margin-top: 25px; /* Más margen superior */
+    font-family: 'JetBrains Mono', monospace;
     overflow-x: auto;
 }
 
@@ -379,6 +497,28 @@ select:focus, textarea:focus {
     flex-grow: 1; /* Permite que la partitura ocupe el espacio restante */
     overflow-y: auto; /* AÑADE EL SCROLL VERTICAL */
 }
+
+/* Estilos para el scrollbar en WebKit (Chrome, Safari, Edge) */
+.song-sheet-container::-webkit-scrollbar {
+    width: 8px; /* Ancho del scrollbar vertical */
+    height: 8px; /* Alto del scrollbar horizontal */
+}
+
+.song-sheet-container::-webkit-scrollbar-track {
+    background: var(--bg-card); /* Color del fondo del track */
+    border-radius: 10px;
+}
+
+.song-sheet-container::-webkit-scrollbar-thumb {
+    background-color: var(--grey); /* Color del "pulgar" del scrollbar */
+    border-radius: 10px;
+    border: 2px solid var(--bg-card); /* Borde para que se vea más delgado */
+}
+
+.song-sheet-container::-webkit-scrollbar-thumb:hover {
+    background-color: var(--text-muted-color); /* Color al pasar el ratón */
+}
+
 
 .song-line {
     position: relative;
@@ -451,7 +591,7 @@ select:focus, textarea:focus {
 
 .chord-visual .chord-tooltip {
     position: absolute;
-    bottom: 140%; 
+    bottom: 30px; /* Ajustar a un valor fijo en píxeles */
     left: 50%;
     transform: translateX(-50%);
     background-color: var(--bg-main);
@@ -461,7 +601,7 @@ select:focus, textarea:focus {
     font-size: 2.8rem; 
     font-weight: 500;
     white-space: nowrap;
-    z-index: 10;
+    z-index: 9999; /* Aumentar z-index para asegurar que esté por encima */
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.2s, visibility 0.2s, bottom 0.2s;
@@ -553,6 +693,7 @@ select:focus, textarea:focus {
     font-size: 1.5rem;
     font-weight: 500;
     margin-right: auto;
+    font-family: 'Victor Mono', monospace; /* Forzar Victor Mono */
 }
 
 #chord-inspector-close-btn {
@@ -599,10 +740,29 @@ select:focus, textarea:focus {
 }
 #chord-inspector-play-btn svg { width: 16px; height: 16px; margin-left: 3px; }
 
+#transposition-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px; /* Adjust gap as needed */
+}
+
 #transposition-controls span {
     color: var(--text-main);
     font-weight: 500;
     min-width: 150px;
+    text-align: center;
+}
+
+#transpose-down-btn, #transpose-up-btn {
+    background-color: var(--accent-yellow);
+    border-color: var(--accent-yellow);
+    color: var(--black); /* Texto oscuro para el botón amarillo */
+}
+
+#transpose-down-btn:hover:not(:disabled), #transpose-up-btn:hover:not(:disabled) {
+    background-color: var(--accent-yellow-hover);
+    border-color: var(--accent-yellow-hover);
 }
 
 .inspector-controls {
@@ -670,6 +830,9 @@ select:focus, textarea:focus {
 
 /* --- Media query para pantallas pequeñas --- */
 @media (max-width: 768px) { /* Ajustado el breakpoint para tablets */
+    #app {
+        padding: 20px; /* Ajustar padding para pantallas pequeñas */
+    }
     header h1 {
         font-size: 1.5rem;
     }

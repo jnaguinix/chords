@@ -77,12 +77,12 @@ export class AudioEngine {
         this.sampler.triggerAttackRelease(noteName, duration);
     }
     
-    public async playChord(item: SequenceItem): Promise<void> {
+    public async playChord(item: SequenceItem, transpositionOffset: number = 0): Promise<void> {
         if (!(await this.ensureReady()) || !this.sampler) return;
 
         // --- CORRECCIÓN AQUÍ ---
         // Se eliminó el segundo argumento 'true' de la llamada a getChordNotes.
-        const { notesToPress, bassNoteIndex } = getChordNotes(item);
+        const { notesToPress, bassNoteIndex } = getChordNotes(item, transpositionOffset);
         
         const allNotesToPlay = [...notesToPress];
         if (bassNoteIndex !== null) {

@@ -15,11 +15,12 @@ const DEGREE_TO_INTERVAL: { [key: number]: number } = {
 };
 
 
-export function getChordNotes(item: SequenceItem): { notesToPress: number[], bassNoteIndex: number | null, allNotesForRange: number[] } {
+export function getChordNotes(item: SequenceItem, transpositionOffset: number = 0): { notesToPress: number[], bassNoteIndex: number | null, allNotesForRange: number[] } {
     if (!item.rootNote || !item.type) {
         return { notesToPress: [], bassNoteIndex: null, allNotesForRange: [] };
     }
-    const rootNoteIndex = NOTE_TO_INDEX[item.rootNote];
+    const transposedRootNote = transposeNote(item.rootNote, transpositionOffset);
+    const rootNoteIndex = NOTE_TO_INDEX[transposedRootNote];
     const intervals = MUSICAL_INTERVALS[item.type];
     if (rootNoteIndex === undefined || !intervals) {
         return { notesToPress: [], bassNoteIndex: null, allNotesForRange: [] };
@@ -53,8 +54,8 @@ export function getChordNotes(item: SequenceItem): { notesToPress: number[], bas
     fundamentalChordNotes.sort((a: number, b: number) => a - b);
 
     let bassAbsoluteIndex: number | null = null;
-    const bassNoteName = item.bassNote || item.rootNote;
-    const bassNoteIndexMod12 = NOTE_TO_INDEX[bassNoteName];
+    const transposedBassNote = item.bassNote ? transposeNote(item.bassNote, transpositionOffset) : transposedRootNote;
+    const bassNoteIndexMod12 = NOTE_TO_INDEX[transposedBassNote];
 
     if (bassNoteIndexMod12 !== undefined) {
         // --- LÓGICA DE BAJO CORREGIDA PARA CONSISTENCIA ---
@@ -93,7 +94,7 @@ export function getChordNotes(item: SequenceItem): { notesToPress: number[], bas
 }
 
 
-export function formatChordName(item: SequenceItem, options: { style: 'short' | 'long' }): string {
+export function formatChordName(item: SequenceItem, options: { style: 'short' | 'long' }, transpositionOffset: number = 0): string {
     if (!item) return '';
 
     if (!item.rootNote || !item.type) {
@@ -101,28 +102,30 @@ export function formatChordName(item: SequenceItem, options: { style: 'short' | 
     }
 
     const { rootNote, type, bassNote, inversion, alterations } = item;
+    const transposedRootNote = transposeNote(rootNote, transpositionOffset);
+    const transposedBassNote = bassNote ? transposeNote(bassNote, transpositionOffset) : transposedRootNote;
     
     if (options.style === 'short') {
         const suffix = CHORD_TYPE_TO_SUFFIX[type] ?? '';
-        let displayName = rootNote + suffix;
+        let displayName = transposedRootNote + suffix;
 
         if (alterations && alterations.length > 0) {
             displayName += `(${alterations.join(',')})`;
         }
 
-        if (bassNote && bassNote !== rootNote) {
-            displayName += `/${bassNote}`;
+        if (bassNote && transposedBassNote !== transposedRootNote) {
+            displayName += `/${transposedBassNote}`;
         }
         return displayName;
     }
 
     if (options.style === 'long') {
-        let displayName = `${rootNote} ${type}`;
+        let displayName = `${transposedRootNote} ${type}`;
         if (alterations && alterations.length > 0) {
             displayName += ` con alteraciones ${alterations.join(', ')}`;
         }
-        if (bassNote && bassNote !== rootNote) {
-            displayName += ` / ${bassNote}`;
+        if (bassNote && transposedBassNote !== transposedRootNote) {
+            displayName += ` / ${transposedBassNote}`;
         }
         if (inversion && inversion > 0) {
             displayName += ` (${inversion}ª Inv.)`;
@@ -264,10 +267,7 @@ export function parseSongText(songText: string): ProcessedSong {
         }
     }
 
-    if (processedLines.length > 0 && (processedLines[0].lyrics.trim() !== '' || processedLines[0].chords.length > 0)) {
-        const emptyLine: SongLine = { lyrics: '', chords: [], isInstrumental: false };
-        processedLines.unshift(emptyLine);
-    }
+    
 
     return { lines: processedLines, allChords };
 }

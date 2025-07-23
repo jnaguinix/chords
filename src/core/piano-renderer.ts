@@ -68,6 +68,7 @@ export function createPiano(
 interface SongSheetCallbacks {
     onShortClick: (item: SequenceItem) => void;
     onLongClick: (item: SequenceItem) => void;
+    transposition: number; // Añadir la propiedad de transposición
 }
 
 // =========================================================================
@@ -76,7 +77,8 @@ interface SongSheetCallbacks {
 export function createSongSheet(
     container: HTMLElement,
     lines: SongLine[],
-    callbacks: SongSheetCallbacks
+    callbacks: SongSheetCallbacks,
+    transposition: number // Añadir el parámetro de transposición aquí también
 ): void {
     container.innerHTML = '';
     container.className = 'song-sheet-container';
@@ -107,7 +109,7 @@ export function createSongSheet(
             // CAMBIO: Creamos un span interior para la APARIENCIA y la INTERACCIÓN
             const visualEl = document.createElement('span');
             visualEl.className = 'chord-visual'; // Nueva clase para el estilo
-            visualEl.textContent = chord.raw || formatChordName(chord, { style: 'short' });
+            visualEl.textContent = formatChordName(chord, { style: 'short' }, callbacks.transposition); // Siempre usar formatChordName con transposición
             
             if (isAnnotation) {
                 visualEl.classList.add('chord-annotation');
@@ -119,7 +121,7 @@ export function createSongSheet(
 
                 const tooltip = document.createElement('span');
                 tooltip.className = 'chord-tooltip';
-                tooltip.textContent = formatChordName(chord, { style: 'long' });
+                tooltip.textContent = formatChordName(chord, { style: 'long' }, callbacks.transposition);
                 visualEl.appendChild(tooltip);
 
                 // Lógica de clic corto vs. clic largo

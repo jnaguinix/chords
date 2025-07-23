@@ -6,7 +6,7 @@
     <title>Extractor de Acordes y Visualizador</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Victor+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <script type="importmap">
     {
       "imports": {
@@ -17,15 +17,12 @@
 </head>
 <body>
     <div id="app">
-        <header>
-            <h1>Visualizador y Compositor de Piano</h1>
-            <p class="description">Explora progresiones de acordes en un entorno visual, interactivo y sonoro.</p>
-        </header>
+        
         
         <nav class="tabs">
             <button id="visualizer-tab" class="tab active">Visualizador</button>
-            <button id="composer-tab" class="tab">Compositor</button>
             <button id="extractor-tab" class="tab">Extractor</button>
+            <button id="composer-tab" class="tab">Compositor</button>
         </nav>
 
         <main id="visualizer-mode" class="mode-content active">
@@ -61,28 +58,6 @@
             </div>
         </main>
 
-        <!-- SECCIÓN DEL COMPOSITOR ACTUALIZADA -->
-        <main id="composer-mode" class="mode-content">
-            <!-- El texto de descripción ha sido eliminado -->
-            
-            <div class="composition-header">
-                <!-- Nuevo contenedor para el piano -->
-                <div id="composer-piano-display" class="piano-container-small">
-                    <!-- El piano del compositor se renderizará aquí -->
-                </div>
-                <!-- El botón de limpiar ahora está a la derecha -->
-                <div class="composition-actions">
-                    <button id="clear-sequence-btn" class="button-secondary">Limpiar Canción</button>
-                </div>
-            </div>
-
-            <div id="composition-output">
-                <!-- La composición generada se mostrará aquí -->
-            </div>
-
-            <div id="chord-insertion-indicator" class="insert-placeholder" style="display: none;">+</div>
-        </main>
-
         <main id="extractor-mode" class="mode-content">
              <p class="description" style="max-width: 650px;">Pega la letra y los acordes de una canción. Haz clic en un acorde para ver su diagrama y escucharlo.</p>
             <textarea id="song-input" placeholder="Pega tu canción aquí... por ejemplo:
@@ -111,6 +86,32 @@ Sobre toda, humanidad y ley..."></textarea>
             <div id="song-output" class="song-sheet-container">
                  <!-- La canción procesada se mostrará aquí -->
             </div>
+        </main>
+
+        <!-- SECCIÓN DEL COMPOSITOR ACTUALIZADA -->
+        <main id="composer-mode" class="mode-content">
+            <!-- El texto de descripción ha sido eliminado -->
+            
+            <div class="composition-header">
+                <!-- Nuevo contenedor para el piano -->
+                <div id="composer-piano-display" class="piano-container-small">
+                    <!-- El piano del compositor se renderizará aquí -->
+                </div>
+                <!-- El botón de limpiar ahora está a la derecha -->
+                <div class="composer-controls-group">
+                    <div id="composer-transposition-controls" class="controls">
+                        <button id="composer-transpose-down-btn" class="button-secondary">-</button>
+                        <span id="composer-transposition-display">Original</span>
+                        <button id="composer-transpose-up-btn" class="button-secondary">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="composition-output">
+                <!-- La composición generada se mostrará aquí -->
+            </div>
+
+            <div id="chord-insertion-indicator" class="insert-placeholder" style="display: none;">+</div>
         </main>
 
         <!-- ... Resto del HTML (Modales, etc.) ... -->
