@@ -1,3 +1,4 @@
+import './index.css';
 import { Visualizer } from './src/modes/visualizer';
 import { Composer } from './src/modes/composer';
 import { Extractor } from './src/modes/extractor';
