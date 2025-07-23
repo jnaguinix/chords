@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Extractor de Acordes y Visualizador</title>
-    <!-- La línea del stylesheet ha sido eliminada de aquí -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;700&display=swap" rel="stylesheet">
@@ -30,7 +29,8 @@
         </nav>
 
         <main id="visualizer-mode" class="mode-content active">
-            <div class="controls">
+            <!-- ... Contenido del modo Visualizador ... -->
+             <div class="controls">
                 <div class="select-wrapper">
                     <label for="root-note-select">Nota Raíz</label>
                     <select id="root-note-select"></select>
@@ -61,30 +61,19 @@
             </div>
         </main>
 
+        <!-- SECCIÓN DEL COMPOSITOR ACTUALIZADA -->
         <main id="composer-mode" class="mode-content">
-            <p class="description" style="max-width: 650px; margin-bottom: 1.5rem;">Haz clic en la letra para insertar un acorde. Arrastra las etiquetas para reordenar.</p>
+            <!-- El texto de descripción ha sido eliminado -->
             
-            <div id="composer-controls" class="controls" style="display: none;">
-                <div class="select-wrapper">
-                    <label for="composer-root-note-select">Nota Raíz</label>
-                    <select id="composer-root-note-select"></select>
+            <div class="composition-header">
+                <!-- Nuevo contenedor para el piano -->
+                <div id="composer-piano-display" class="piano-container-small">
+                    <!-- El piano del compositor se renderizará aquí -->
                 </div>
-                <div class="select-wrapper">
-                    <label for="composer-type-select">Tipo de Acorde</label>
-                    <select id="composer-type-select"></select>
+                <!-- El botón de limpiar ahora está a la derecha -->
+                <div class="composition-actions">
+                    <button id="clear-sequence-btn" class="button-secondary">Limpiar Canción</button>
                 </div>
-                <div class="select-wrapper">
-                    <label for="composer-bass-note-select">Bajo en (Opcional)</label>
-                    <select id="composer-bass-note-select"></select>
-                </div>
-                <div class="select-wrapper">
-                    <label for="composer-inversion-select">Inversión</label>
-                    <select id="composer-inversion-select"></select>
-                </div>
-                <button id="add-to-sequence-btn" class="button-primary">Añadir</button>
-            </div>
-            <div class="composition-actions">
-                <button id="clear-sequence-btn" class="button-secondary">Limpiar Canción</button>
             </div>
 
             <div id="composition-output">
@@ -92,21 +81,29 @@
             </div>
 
             <div id="chord-insertion-indicator" class="insert-placeholder" style="display: none;">+</div>
-
         </main>
 
         <main id="extractor-mode" class="mode-content">
-            <p class="description" style="max-width: 650px;">Pega la letra y los acordes de una canción. Haz clic en un acorde para ver su diagrama y escucharlo.</p>
+             <p class="description" style="max-width: 650px;">Pega la letra y los acordes de una canción. Haz clic en un acorde para ver su diagrama y escucharlo.</p>
             <textarea id="song-input" placeholder="Pega tu canción aquí... por ejemplo:
 
       G         D
 Sobre todo, poder y rey
      Em         C
 Sobre toda, humanidad y ley..."></textarea>
+            
+            <div id="transposition-controls" class="controls" style="display: none; margin-top: 20px; justify-content: center;">
+                <button id="transpose-down-btn" class="button-secondary">- Semitono</button>
+                <span id="transposition-display">Tonalidad Original</span>
+                <button id="transpose-up-btn" class="button-secondary">+ Semitono</button>
+            </div>
+            
             <div class="controls">
                 <button id="process-song-btn" class="button-primary">Analizar Canción</button>
+                <button id="clear-extractor-btn" class="button-secondary">Limpiar</button>
                 <button id="add-to-composer-btn" class="button-secondary" disabled>Añadir acordes al Compositor</button>
             </div>
+            
             <div id="extractor-loader" class="loader-container" style="display: none;">
                 <div class="spinner"></div>
                 <p>Analizando...</p>
@@ -114,15 +111,10 @@ Sobre toda, humanidad y ley..."></textarea>
             <div id="song-output" class="song-sheet-container">
                  <!-- La canción procesada se mostrará aquí -->
             </div>
-            <div id="transposition-controls" class="controls" style="display: none; margin-top: 20px;">
-                <button id="transpose-down-btn" class="button-secondary">- Semitono</button>
-                <span id="transposition-display">Tonalidad Original</span>
-                <button id="transpose-up-btn" class="button-secondary">+ Semitono</button>
-            </div>
         </main>
 
-        <!-- Chord Inspector Modal -->
-        <div id="chord-inspector-overlay"></div>
+        <!-- ... Resto del HTML (Modales, etc.) ... -->
+         <div id="chord-inspector-overlay"></div>
         <div id="chord-inspector-modal">
             <div class="inspector-header">
                 <h3 id="chord-inspector-title"></h3>
@@ -144,12 +136,10 @@ Sobre toda, humanidad y ley..."></textarea>
                     <select id="chord-inspector-type-select"></select>
                 </div>
                 
-                <!-- === BLOQUE AÑADIDO === -->
                 <div class="select-wrapper">
                     <label for="chord-inspector-bass-note-select">Bajo en (Opcional)</label>
                     <select id="chord-inspector-bass-note-select"></select>
                 </div>
-                <!-- ===================== -->
 
                 <div class="select-wrapper">
                     <label for="chord-inspector-inversion-select">Inversión</label>
@@ -159,11 +149,6 @@ Sobre toda, humanidad y ley..."></textarea>
             
             <div id="chord-inspector-piano"></div>
         </div>
-
-        <!-- Chord Replacement Modal -->
-        <div id="chord-replacement-overlay" class="modal-overlay"></div>
-
-
     </div>
     <script type="module" src="/src/main.tsx"></script>
 </body>

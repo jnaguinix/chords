@@ -1,14 +1,12 @@
-// extractor.ts (Versión Final y Corregida)
-
-// CAMBIO: Eliminamos 'recalculateChordLayout' de la importación
-import { applyTransposition, parseSongText } from '../core/chord-utils';
+import { applyTransposition, parseSongText, formatChordName } from '../core/chord-utils';
 import { createSongSheet } from '../core/piano-renderer'; 
 import type { ProcessedSong, SequenceItem, ShowInspectorFn } from '../types';
 import type { AudioEngine } from '../core/audio';
 
-interface ExtractorDOMElements {
+interface ExtractorElements {
     songInput: HTMLTextAreaElement;
     processSongBtn: HTMLButtonElement;
+    clearExtractorBtn: HTMLButtonElement;
     addToComposerBtn: HTMLButtonElement;
     loader: HTMLElement;
     songOutput: HTMLElement;
@@ -24,16 +22,15 @@ interface ExtractorCallbacks {
 }
 
 export class Extractor {
-    private elements: ExtractorDOMElements;
+    private elements: ExtractorElements;
     private callbacks: ExtractorCallbacks;
     private audioEngine: AudioEngine;
-    private originalParsedSong: ProcessedSong | null = null;
-    private currentDisplayedSong: ProcessedSong | null = null;
+    private originalSong: ProcessedSong | null = null;
+    private displayedSong: ProcessedSong | null = null;
     private transpositionOffset = 0;
-    private nextChordId = 0;
 
     constructor(
-        elements: ExtractorDOMElements, 
+        elements: ExtractorElements, 
         callbacks: ExtractorCallbacks,
         audioEngine: AudioEngine
     ) {
@@ -43,12 +40,9 @@ export class Extractor {
     }
 
     public init(): void {
-        this.addEventListeners();
-    }
-
-    private addEventListeners(): void {
         this.elements.processSongBtn.addEventListener('click', this.handleProcessSong);
         this.elements.addToComposerBtn.addEventListener('click', this.handleAddToComposer);
+        this.elements.clearExtractorBtn.addEventListener('click', this.handleClearExtractor);
         this.elements.transposeUpBtn.addEventListener('click', () => this.handleTranspose(1));
         this.elements.transposeDownBtn.addEventListener('click', () => this.handleTranspose(-1));
     }
@@ -59,74 +53,55 @@ export class Extractor {
         this.elements.loader.style.display = 'flex';
         this.elements.songOutput.innerHTML = '';
         this.elements.addToComposerBtn.disabled = true;
-        this.elements.processSongBtn.disabled = true;
         this.elements.transpositionControls.style.display = 'none';
         
         setTimeout(() => {
             try {
-                this.originalParsedSong = parseSongText(songText);
+                this.originalSong = parseSongText(songText);
                 
-                // CAMBIO: Añadimos una comprobación para asegurar que la canción se procesó bien
-                if (!this.originalParsedSong) {
-                    throw new Error("La canción no pudo ser procesada.");
-                }
-
-                this.nextChordId = 0;
-                this.originalParsedSong.lines.forEach(line => {
-                    line.chords.forEach(songChord => {
-                        if (!songChord.isAnnotation && songChord.chord) {
-                            songChord.chord.id = this.nextChordId++;
-                        }
+                if (this.originalSong) {
+                    let idCounter = 0;
+                    this.originalSong.allChords.forEach(chord => {
+                        chord.id = idCounter++;
                     });
-                });
+                }
                 
                 this.transpositionOffset = 0;
-                this.updateDisplayedSong();
-                this.elements.addToComposerBtn.disabled = !this.currentDisplayedSong || this.currentDisplayedSong.allChords.length === 0;
-                this.elements.transpositionControls.style.display = 'flex';
+                this.updateAndRenderSong();
+
+                if (this.originalSong && this.originalSong.allChords.length > 0) {
+                    this.elements.addToComposerBtn.disabled = false;
+                    this.elements.transpositionControls.style.display = 'flex';
+                }
             } catch (error) {
                 console.error("Error al procesar la canción:", error);
                 this.elements.songOutput.textContent = "Hubo un error al analizar la canción.";
             } finally {
                 this.elements.loader.style.display = 'none';
-                this.elements.processSongBtn.disabled = false;
             }
         }, 50);
     }
 
-    private updateDisplayedSong = (): void => {
-        if (!this.originalParsedSong) return;
-        
-        const songToTranspose = JSON.parse(JSON.stringify(this.originalParsedSong));
-        this.currentDisplayedSong = applyTransposition(songToTranspose, this.transpositionOffset);
-        
-        // CAMBIO: Comprobamos que la canción a mostrar no sea null antes de usarla
-        if (this.currentDisplayedSong) {
-            createSongSheet(this.elements.songOutput, this.currentDisplayedSong.lines, {
-                onShortClick: this.onShortClick,
-                onLongClick: this.onLongClick,
-            });
-        }
-        
-        if (this.transpositionOffset === 0) {
-            this.elements.transpositionDisplay.textContent = 'Tonalidad Original';
-        } else {
-            const sign = this.transpositionOffset > 0 ? '+' : '';
-            this.elements.transpositionDisplay.textContent = `${sign}${this.transpositionOffset} Semitonos`;
-        }
-    }
+    private handleClearExtractor = (): void => {
+        this.elements.songInput.value = '';
+        this.elements.songOutput.innerHTML = '';
+        this.elements.transpositionControls.style.display = 'none';
+        this.elements.addToComposerBtn.disabled = true;
+        this.originalSong = null;
+        this.displayedSong = null;
+        this.transpositionOffset = 0;
+    };
 
     private handleAddToComposer = (): void => {
-        // CAMBIO: Tu comprobación original ya era correcta, la mantenemos.
-        if (this.currentDisplayedSong) {
-            this.callbacks.addToComposer(JSON.parse(JSON.stringify(this.currentDisplayedSong)));
+        if (this.displayedSong) {
+            this.callbacks.addToComposer(JSON.parse(JSON.stringify(this.displayedSong)));
         }
     }
 
     private handleTranspose = (semitones: number): void => {
-        if (!this.originalParsedSong) return;
+        if (!this.originalSong) return;
         this.transpositionOffset += semitones;
-        this.updateDisplayedSong();
+        this.updateAndRenderSong();
     }
 
     private onShortClick = (item: SequenceItem): void => {
@@ -134,7 +109,56 @@ export class Extractor {
     }
 
     private onLongClick = (item: SequenceItem): void => {
-        // CAMBIO: Añadimos los callbacks vacíos para que coincida con el tipo ShowInspectorFn
         this.callbacks.showInspector(item, {});
+    }
+
+    private updateAndRenderSong(): void {
+        if (!this.originalSong) return;
+        
+        const songToTranspose = JSON.parse(JSON.stringify(this.originalSong));
+        this.displayedSong = applyTransposition(songToTranspose, this.transpositionOffset);
+        
+        this.elements.songOutput.innerHTML = '';
+        if (this.displayedSong) {
+            // --- FIX: Re-sincronizar el texto visual (raw) y las referencias ---
+            
+            // 1. Actualizamos el texto 'raw' de cada acorde usando los datos ya transpuestos.
+            this.displayedSong.allChords.forEach(chord => {
+                if (chord.rootNote && chord.type) {
+                    chord.raw = formatChordName(chord, { style: 'short' });
+                }
+            });
+
+            // 2. Re-sincronizamos las referencias para que las 'lines' usen los acordes actualizados.
+            const transposedChordsMap = new Map(this.displayedSong.allChords.map(c => [c.id, c]));
+            this.displayedSong.lines.forEach(line => {
+                line.chords.forEach(songChord => {
+                    if (songChord.chord && songChord.chord.id !== undefined) {
+                        songChord.chord = transposedChordsMap.get(songChord.chord.id)!;
+                    }
+                });
+            });
+            // --- FIN DEL FIX ---
+
+            createSongSheet(
+                this.elements.songOutput, 
+                this.displayedSong.lines, 
+                {
+                    onShortClick: this.onShortClick,
+                    onLongClick: this.onLongClick,
+                }
+            );
+        }
+        
+        this.updateTranspositionDisplay();
+    }
+
+    private updateTranspositionDisplay(): void {
+        if (this.transpositionOffset === 0) {
+            this.elements.transpositionDisplay.textContent = 'Tonalidad Original';
+        } else {
+            const sign = this.transpositionOffset > 0 ? '+' : '';
+            this.elements.transpositionDisplay.textContent = `${sign}${this.transpositionOffset} Semitonos`;
+        }
     }
 }

@@ -5,7 +5,6 @@ import { Extractor } from './modes/extractor';
 import { AudioEngine } from './core/audio';
 import { createPiano } from './core/piano-renderer';
 import { getChordNotes, calculateOptimalPianoRange } from './core/chord-utils';
-// CAMBIO: Importamos la constante correcta de tu archivo para los nombres de las notas
 import { MUSICAL_INTERVALS, INDEX_TO_DISPLAY_NAME } from './constants';
 import type { SequenceItem, ProcessedSong, InspectorCallbacks, ShowInspectorFn } from './types';
 
@@ -29,7 +28,6 @@ class PianoApp {
     private chordInspectorInsertBtn: HTMLButtonElement; 
     private chordInspectorRootNoteSelect: HTMLSelectElement;
     private chordInspectorTypeSelect: HTMLSelectElement;
-    // CAMBIO: Añadimos la propiedad para el selector de bajo
     private chordInspectorBassNoteSelect: HTMLSelectElement;
     private chordInspectorInversionSelect: HTMLSelectElement;
 
@@ -59,7 +57,6 @@ class PianoApp {
         this.chordInspectorInsertBtn = document.getElementById('chord-inspector-insert-btn') as HTMLButtonElement; 
         this.chordInspectorRootNoteSelect = document.getElementById('chord-inspector-root-note-select') as HTMLSelectElement;
         this.chordInspectorTypeSelect = document.getElementById('chord-inspector-type-select') as HTMLSelectElement;
-        // CAMBIO: Buscamos el nuevo elemento en el DOM
         this.chordInspectorBassNoteSelect = document.getElementById('chord-inspector-bass-note-select') as HTMLSelectElement;
         this.chordInspectorInversionSelect = document.getElementById('chord-inspector-inversion-select') as HTMLSelectElement;
         
@@ -77,10 +74,13 @@ class PianoApp {
             this.audioEngine
         );
         
+        // --- BLOQUE CORREGIDO ---
         this.composer = new Composer({
                 clearSequenceBtn: document.getElementById('clear-sequence-btn') as HTMLButtonElement,
                 compositionOutput: document.getElementById('composition-output')!,
                 insertionIndicator: document.getElementById('chord-insertion-indicator')!,
+                // ¡LA LÍNEA QUE FALTABA!
+                composerPianoDisplay: document.getElementById('composer-piano-display')!,
             },
             this.showChordInspector,
             this.audioEngine
@@ -89,6 +89,7 @@ class PianoApp {
         this.extractor = new Extractor({
                 songInput: document.getElementById('song-input') as HTMLTextAreaElement,
                 processSongBtn: document.getElementById('process-song-btn') as HTMLButtonElement,
+                clearExtractorBtn: document.getElementById('clear-extractor-btn') as HTMLButtonElement,
                 addToComposerBtn: document.getElementById('add-to-composer-btn') as HTMLButtonElement,
                 loader: document.getElementById('extractor-loader')!,
                 songOutput: document.getElementById('song-output')!,
@@ -121,7 +122,6 @@ class PianoApp {
         
         this.chordInspectorRootNoteSelect.addEventListener('change', this.handleInspectorChange);
         this.chordInspectorTypeSelect.addEventListener('change', this.handleInspectorChange);
-        // CAMBIO: Añadimos el event listener para el nuevo selector
         this.chordInspectorBassNoteSelect.addEventListener('change', this.handleInspectorChange);
         this.chordInspectorInversionSelect.addEventListener('change', this.handleInspectorChange);
 
@@ -158,10 +158,6 @@ class PianoApp {
         this.currentInspectorItem.bassNote = (newBassNote === 'none') ? undefined : newBassNote;
         this.currentInspectorItem.inversion = newInversion;
         
-        // --- CAMBIO INCORRECTO REVERTIDO ---
-        // Se ha eliminado el bloque de código que reseteaba la inversión
-        // al seleccionar un bajo. Ahora ambos controles son independientes.
-
         if (typeChanged) {
             this.currentInspectorItem.inversion = 0;
             this.populateInversionSelect(this.currentInspectorItem);
@@ -206,7 +202,6 @@ class PianoApp {
     private populateSelects(item: SequenceItem): void {
         // --- POBLAR NOTA RAÍZ ---
         this.chordInspectorRootNoteSelect.innerHTML = '';
-        // CAMBIO: Usamos tu constante INDEX_TO_DISPLAY_NAME para un menú limpio
         INDEX_TO_DISPLAY_NAME.forEach(note => {
             const option = document.createElement('option');
             option.value = note;
@@ -225,7 +220,7 @@ class PianoApp {
         });
         this.chordInspectorTypeSelect.value = item.type;
         
-        // --- CAMBIO: POBLAR NOTA DE BAJO ---
+        // --- POBLAR NOTA DE BAJO ---
         this.chordInspectorBassNoteSelect.innerHTML = '';
         const noBassOption = document.createElement('option');
         noBassOption.value = 'none';
@@ -238,7 +233,6 @@ class PianoApp {
             option.textContent = note;
             this.chordInspectorBassNoteSelect.appendChild(option);
         });
-        // Establecer el valor correcto al abrir
         this.chordInspectorBassNoteSelect.value = item.bassNote || 'none';
 
         // --- POBLAR INVERSIÓN ---
@@ -249,7 +243,6 @@ class PianoApp {
         const currentInversion = item.inversion || 0;
         this.chordInspectorInversionSelect.innerHTML = '';
         const intervals = MUSICAL_INTERVALS[item.type];
-        // CAMBIO: Ajustamos el cálculo al hecho de que tus intervalos incluyen el 0.
         const numNotes = intervals ? intervals.length : 0;
         
         if (numNotes > 0) {

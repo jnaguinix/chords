@@ -1,15 +1,16 @@
-// composer.ts (Versión Final y Limpia sin Sequence Display)
+// composer.ts (Versión Final y Corregida con Piano Display)
 
 import type { ProcessedSong, SequenceItem, SongChord, ShowInspectorFn } from '../types';
-import { formatChordName } from '../core/chord-utils';
-import { createSongSheet } from '../core/piano-renderer';
+import { formatChordName, getChordNotes, calculateOptimalPianoRange } from '../core/chord-utils';
+import { createSongSheet, createPiano } from '../core/piano-renderer';
 import type { AudioEngine } from '../core/audio';
 
-// La interfaz ya no necesita 'sequenceDisplay'
+// La interfaz ahora incluye el nuevo piano display
 interface ComposerDOMElements {
     clearSequenceBtn: HTMLButtonElement;
     compositionOutput: HTMLElement;
     insertionIndicator: HTMLElement; 
+    composerPianoDisplay: HTMLElement; // <-- Piano persistente
 }
 
 export class Composer {
@@ -43,15 +44,18 @@ export class Composer {
     }
     
     private addEventListeners(): void {
-        this.elements.clearSequenceBtn.addEventListener('click', () => {
-            this.currentSong = { lines: [], allChords: [] };
-            this.nextChordId = 1;
-            this.render();
-        });
+        this.elements.clearSequenceBtn.addEventListener('click', this.handleClearSequence);
         this.elements.compositionOutput.addEventListener('mousemove', this.handleMouseMove);
         this.elements.compositionOutput.addEventListener('mouseleave', this.handleMouseLeave);
         this.elements.compositionOutput.addEventListener('click', this.handleInsertionClick);
     }
+
+    private handleClearSequence = (): void => {
+        this.currentSong = { lines: [], allChords: [] };
+        this.nextChordId = 1;
+        this.elements.composerPianoDisplay.innerHTML = ''; // Limpia el piano
+        this.render();
+    };
 
     private getCharWidth(element: HTMLElement): number {
         const span = document.createElement('span');
@@ -175,11 +179,23 @@ export class Composer {
         this.render();
     }
 
+    private updateDisplayPiano(item: SequenceItem): void {
+        const { notesToPress, bassNoteIndex, allNotesForRange } = getChordNotes(item);
+        if (allNotesForRange.length > 0) {
+            const { startNote, endNote } = calculateOptimalPianoRange(allNotesForRange, 15, 2);
+            createPiano(this.elements.composerPianoDisplay, startNote, endNote, notesToPress, true, bassNoteIndex);
+        } else {
+            this.elements.composerPianoDisplay.innerHTML = '';
+        }
+    }
+
     private onShortClick = (item: SequenceItem): void => {
         this.audioEngine.playChord(item);
+        this.updateDisplayPiano(item);
     }
 
     private onLongClick = (item: SequenceItem): void => {
+        this.updateDisplayPiano(item);
         this.showInspector(item, {
             onUpdate: (updatedItem) => {
                 this.updateChordInSong(updatedItem);
@@ -189,7 +205,6 @@ export class Composer {
         });
     }
     
-    // El método render() ahora solo llama a renderSongSheet()
     private render(): void {
         this.renderSongSheet();
     }
@@ -197,7 +212,6 @@ export class Composer {
     private renderSongSheet(): void {
         this.elements.compositionOutput.innerHTML = '';
         if (!this.currentSong || this.currentSong.lines.length === 0) {
-            // Asignamos la clase aquí también para consistencia
             this.elements.compositionOutput.className = 'song-sheet-container';
             this.elements.compositionOutput.innerHTML = `<div class="song-line" data-line-index="0"><div class="lyrics-layer" style="min-height: 2em; cursor: text;">Haz clic aquí para empezar a componer...</div></div>`;
             return;
@@ -206,6 +220,7 @@ export class Composer {
         createSongSheet(this.elements.compositionOutput, this.currentSong.lines, {
             onShortClick: this.onShortClick,
             onLongClick: this.onLongClick,
+            // 'isEditable' ha sido eliminado para corregir el error de TypeScript
         });
     }
 }

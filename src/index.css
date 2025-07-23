@@ -34,31 +34,29 @@ body {
 
 
 #app {
-    /* ANTES: width: 100% */
-    width: 95%; /* Ocupa casi todo el ancho, pero deja un pequeño margen a los lados */
-
-    /* ANTES: max-width: 900px */
-    max-width: 1400px; /* Un límite mucho más generoso para pantallas anchas */
-    
+    width: 95%;
+    max-width: 1400px;
     text-align: center;
 }
 
+/* ============================================ */
+/* ENCABEZADO Y TÍTULO                          */
+/* ============================================ */
+
 header h1 {
+    font-size: 1.8rem;
     font-weight: 700;
-    font-size: clamp(2rem, 5vw, 2.5rem);
     margin-bottom: 0.5rem;
     color: var(--accent-green);
 }
 
 .description {
-    color: var(--text-main);
-    font-size: clamp(1rem, 2.5vw, 1.1rem);
-    margin-top: 0;
-    max-width: 550px;
-    margin-left: auto;
-    margin-right: auto;
-    margin-bottom: 2.5rem;
+    display: none;
 }
+
+/* ============================================ */
+/* PESTAÑAS DE NAVEGACIÓN                       */
+/* ============================================ */
 
 .tabs {
     margin-bottom: 2rem;
@@ -170,7 +168,6 @@ select:focus, textarea:focus {
     transition: color 0.2s;
 }
 
-/* --- Piano visualizador principal --- */
 #piano-container {
     display: flex;
     justify-content: center;
@@ -268,17 +265,59 @@ select:focus, textarea:focus {
     box-shadow: 0 0 20px 2px var(--accent-orange);
 }
 
-/* --- Composer Mode Styles --- */
-#composer-controls {
-    display: none;
+/* ============================================ */
+/* MODO COMPOSITOR (CAMBIOS AQUÍ)               */
+/* ============================================ */
+
+.composition-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
 }
 
+.piano-container-small {
+    max-width: 450px; /* Reducimos un poco más el tamaño máximo */
+    min-width: 280px;
+    justify-self: center;
+}
+
+/* --- ¡NUEVOS ESTILOS PARA EL PIANO DEL COMPOSITOR! --- */
+.piano-container-small .piano {
+    /* Quitamos el fondo y la caja */
+    background: none;
+    padding: 0;
+    box-shadow: none;
+    margin: 0; /* Eliminamos el margen por defecto */
+}
+
+/* Reducimos el tamaño de las teclas blancas */
+.piano-container-small .piano .white {
+    width: 38px;
+    height: 170px;
+}
+
+/* Reducimos el tamaño de las teclas negras */
+.piano-container-small .piano .black {
+    width: 22px;
+    height: 105px;
+}
+
+/* Ajustamos la posición de las teclas negras al nuevo tamaño */
+.piano-container-small .piano .white .black {
+    left: calc(38px - (22px / 2));
+}
+
+/* Ocultamos los nombres de las notas en este piano más pequeño */
+.piano-container-small .piano .note-name {
+    display: none;
+}
 
 .composition-actions {
     display: flex;
     justify-content: center;
     gap: 10px;
-    margin-top: 20px;
 }
 
 /* --- Extractor Mode Styles --- */
@@ -320,7 +359,6 @@ select:focus, textarea:focus {
    Estilos UNIFICADOS para las Partituras (Song Sheet)
    ========================================================================== */
 
-/* El contenedor de la partitura. Le damos un scroll si el contenido se desborda. */
 .song-sheet-container {
     text-align: left;
     background-color: var(--bg-card);
@@ -337,16 +375,13 @@ select:focus, textarea:focus {
 
 .song-line {
     position: relative;
-    padding-top: 2em; /* He notado que en tu archivo anterior era 2em, lo respeto */
+    padding-top: 2em;
     margin-bottom: 0.8em;
     width: fit-content; 
     min-width: 100%;
-    
-    /* === AÑADE ESTA LÍNEA === */
-    z-index: 1; /* Establece la capa base para todas las líneas */
+    z-index: 1;
 }
 .song-line:hover {
-    /* Cuando el ratón está sobre esta línea, la pone por encima de las demás */
     z-index: 2;
 }
 
@@ -363,7 +398,6 @@ select:focus, textarea:focus {
     left: 0;
     height: 1.5em;
     pointer-events: none;
-    /* CORRECCIÓN: Se elimina 'width: 100%' para que la capa pueda ser tan ancha como la letra. */
 }
 
 .chord-positioner {
@@ -410,25 +444,21 @@ select:focus, textarea:focus {
 
 .chord-visual .chord-tooltip {
     position: absolute;
-    /* CAMBIO: Lo subimos un poco más para que no esté tan pegado */
     bottom: 140%; 
     left: 50%;
     transform: translateX(-50%);
     background-color: var(--bg-main);
     color: var(--text-main);
-    /* CAMBIO: Le damos más espacio interior (padding) */
     padding: 8px 14px; 
-    border-radius: 6px; /* Un poco más redondeado */
-    /* CAMBIO: ¡Aumentamos el tamaño de la fuente! */
+    border-radius: 6px;
     font-size: 2.8rem; 
-    font-weight: 500; /* Un peso medio para que sea legible */
+    font-weight: 500;
     white-space: nowrap;
     z-index: 10;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.2s, visibility 0.2s, bottom 0.2s; /* Transición más suave */
+    transition: opacity 0.2s, visibility 0.2s, bottom 0.2s;
     pointer-events: none;
-    /* AÑADIDO: Una sombra sutil para que "flote" mejor */
     box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
 }
 
@@ -437,8 +467,6 @@ select:focus, textarea:focus {
     opacity: 1;
     visibility: visible;
 }
-
-/* --- NUEVOS ESTILOS PARA LA INSERCIÓN DE ACORDES --- */
 
 .insert-placeholder {
     display: inline-flex;
@@ -611,9 +639,8 @@ select:focus, textarea:focus {
     display: none;
 }
 
-/* --- LA MAGIA: ESTILOS DE TAMAÑO PARA CADA MODO --- */
+/* --- ESTILOS DE TAMAÑO PARA CADA MODO --- */
 
-/* === ESTILOS PARA EL EXTRACTOR (TAMAÑO ESTÁNDAR) === */
 #extractor-mode .lyrics-layer,
 #extractor-mode .chords-layer {
     font-size: 1.3em; 
@@ -624,8 +651,6 @@ select:focus, textarea:focus {
     transform-origin: top left;
 }
 
-
-/* === ESTILOS PARA EL COMPOSITOR (TAMAÑO EXTRA GRANDE) === */
 #composer-mode .lyrics-layer,
 #composer-mode .chords-layer {
     font-size: 2.0em; 
@@ -634,4 +659,17 @@ select:focus, textarea:focus {
     font-size: 2.0rem; 
     transform: scale(0.5);
     transform-origin: top left;
+}
+
+/* --- Media query para pantallas pequeñas --- */
+@media (max-width: 600px) {
+    header h1 {
+        font-size: 1.5rem;
+    }
+    .composition-header {
+        display: block;
+    }
+    .piano-container-small {
+        margin: 0 auto 1rem;
+    }
 }
