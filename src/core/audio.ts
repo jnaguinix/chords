@@ -1,7 +1,9 @@
 import * as Tone from 'tone';
 import type { SequenceItem } from '../types';
 import { getChordNotes } from './chord-utils';
-import { INDEX_TO_DISPLAY_NAME } from '../constants';
+// --- CAMBIO AQUÍ ---
+// Se reemplaza la constante eliminada por la nueva.
+import { INDEX_TO_SHARP_NAME } from '../constants';
 
 export class AudioEngine {
     private sampler: Tone.Sampler | null = null;
@@ -66,7 +68,9 @@ export class AudioEngine {
     // Converts our internal numeric note index (e.g., 60) to a Tone.js note name (e.g., "C4").
     private convertNoteIndexToToneJSNote(noteIndex: number): string {
         const octave = Math.floor(noteIndex / 12);
-        const noteName = INDEX_TO_DISPLAY_NAME[noteIndex % 12];
+        // --- Y CAMBIO AQUÍ ---
+        // Se usa la nueva constante para obtener el nombre de la nota.
+        const noteName = INDEX_TO_SHARP_NAME[noteIndex % 12];
         return `${noteName}${octave}`;
     }
 
@@ -90,7 +94,7 @@ export class AudioEngine {
         }
         
         // Convert all numeric indices to Tone.js note names.
-        const notesAsStrings = allNotesToPlay.map(this.convertNoteIndexToToneJSNote);
+        const notesAsStrings = allNotesToPlay.map(note => this.convertNoteIndexToToneJSNote(note));
         
         // Tone.js's sampler can play an array of notes at once.
         this.sampler.triggerAttackRelease(notesAsStrings, 2.0);

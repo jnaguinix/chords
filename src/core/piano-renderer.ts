@@ -1,4 +1,4 @@
-import { IS_BLACK_KEY, INDEX_TO_DISPLAY_NAME } from '../constants';
+import { IS_BLACK_KEY, INDEX_TO_SHARP_NAME } from '../constants'; // <-- CAMBIO AQUÍ
 import { formatChordName } from './chord-utils';
 import type { SongLine, SequenceItem, SongChord } from '../types';
 
@@ -22,7 +22,7 @@ export function createPiano(
         const noteIndexMod = (i % 12 + 12) % 12;
         if (IS_BLACK_KEY[noteIndexMod]) continue;
 
-        const noteName = INDEX_TO_DISPLAY_NAME[noteIndexMod];
+        const noteName = INDEX_TO_SHARP_NAME[noteIndexMod]; // <-- Y CAMBIO AQUÍ
         const whiteKey = document.createElement('div');
         whiteKey.className = 'key white';
         
@@ -78,7 +78,7 @@ export function createSongSheet(
     container: HTMLElement,
     lines: SongLine[],
     callbacks: SongSheetCallbacks,
-    transposition: number // Añadir el parámetro de transposición aquí también
+    // --- CAMBIO AQUÍ: Se eliminó el parámetro 'transposition' no utilizado ---
 ): void {
     container.innerHTML = '';
     container.className = 'song-sheet-container';
@@ -145,7 +145,8 @@ export function createSongSheet(
 
                 // Manejo del tooltip global
                 const globalTooltip = document.getElementById('global-tooltip') as HTMLElement;
-                visualEl.addEventListener('mouseenter', (e) => {
+                // --- CAMBIO AQUÍ: Se eliminó el parámetro 'e' no utilizado ---
+                visualEl.addEventListener('mouseenter', () => {
                     const rect = visualEl.getBoundingClientRect();
                     const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
                     const scrollY = window.pageYOffset || document.documentElement.scrollTop;

@@ -10,7 +10,8 @@ export type SequenceItem = {
     type: string;
     bassNote?: string;
     inversion?: number;
-    alterations?: string[]; // <-- ¡CAMBIO! Añadido para manejar alteraciones como (#9), (b5), etc.
+    alterations?: string[];
+    additions?: string[]; // <-- ¡CAMBIO CLAVE! Se añade esta propiedad.
 };
 
 /**

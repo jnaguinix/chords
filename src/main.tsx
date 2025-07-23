@@ -5,7 +5,9 @@ import { Extractor } from './modes/extractor';
 import { AudioEngine } from './core/audio';
 import { createPiano } from './core/piano-renderer';
 import { getChordNotes, calculateOptimalPianoRange } from './core/chord-utils';
-import { MUSICAL_INTERVALS, INDEX_TO_DISPLAY_NAME } from './constants';
+// --- CAMBIO AQUÍ ---
+// Se reemplaza la constante eliminada por la nueva. Usamos SELECTOR_NOTES para los menús.
+import { MUSICAL_INTERVALS, SELECTOR_NOTES } from './constants';
 import type { SequenceItem, ProcessedSong, InspectorCallbacks, ShowInspectorFn } from './types';
 
 class PianoApp {
@@ -205,7 +207,8 @@ class PianoApp {
     private populateSelects(item: SequenceItem): void {
         // --- POBLAR NOTA RAÍZ ---
         this.chordInspectorRootNoteSelect.innerHTML = '';
-        INDEX_TO_DISPLAY_NAME.forEach(note => {
+        // --- CAMBIO AQUÍ ---
+        SELECTOR_NOTES.forEach(note => {
             const option = document.createElement('option');
             option.value = note;
             option.textContent = note;
@@ -230,7 +233,8 @@ class PianoApp {
         noBassOption.textContent = 'Sin Bajo';
         this.chordInspectorBassNoteSelect.appendChild(noBassOption);
 
-        INDEX_TO_DISPLAY_NAME.forEach(note => {
+        // --- CAMBIO AQUÍ ---
+        SELECTOR_NOTES.forEach(note => {
             const option = document.createElement('option');
             option.value = note;
             option.textContent = note;
