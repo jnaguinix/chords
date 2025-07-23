@@ -485,7 +485,7 @@ select {
     text-align: left;
     background-color: var(--bg-card);
     border-radius: 12px; /* Más redondeado */
-    padding: 25px 35px; /* Más padding */
+    padding: 40px 43px; /* Más padding */
     margin-top: 25px; /* Más margen superior */
     font-family: 'JetBrains Mono', monospace;
     overflow-x: auto;
@@ -587,6 +587,22 @@ select {
 .chord-visual.instrumental:hover {
     color: #f8be69;
     background-color: rgba(245, 166, 35, 0.1);
+}
+
+.global-chord-tooltip {
+    position: absolute;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    padding: 6px 10px; 
+    border-radius: 4px;
+    font-size: 1.2rem; 
+    font-weight: 500;
+    white-space: nowrap;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
 }
 
 .chord-visual .chord-tooltip {

@@ -119,11 +119,6 @@ export function createSongSheet(
                     visualEl.classList.add('instrumental');
                 }
 
-                const tooltip = document.createElement('span');
-                tooltip.className = 'chord-tooltip';
-                tooltip.textContent = formatChordName(chord, { style: 'long' }, callbacks.transposition);
-                visualEl.appendChild(tooltip);
-
                 // Lógica de clic corto vs. clic largo
                 let clickTimer: number | null = null;
                 const longClickDuration = 500;
@@ -146,6 +141,41 @@ export function createSongSheet(
                         clearTimeout(clickTimer);
                         callbacks.onShortClick(chord);
                     }
+                });
+
+                // Manejo del tooltip global
+                const globalTooltip = document.getElementById('global-tooltip') as HTMLElement;
+                visualEl.addEventListener('mouseenter', (e) => {
+                    const rect = visualEl.getBoundingClientRect();
+                    const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+                    const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+
+                    globalTooltip.textContent = formatChordName(chord, { style: 'long' }, callbacks.transposition);
+
+                    // Temporarily make visible to get accurate height
+                    globalTooltip.style.visibility = 'hidden'; // Keep hidden for now
+                    globalTooltip.style.opacity = '0';
+                    globalTooltip.style.left = '0px'; // Position off-screen to measure
+                    globalTooltip.style.top = '0px';
+                    globalTooltip.style.transform = 'none'; // Reset transform for measurement
+                    globalTooltip.style.visibility = 'visible'; // Make visible to measure
+                    const tooltipHeight = globalTooltip.offsetHeight;
+                    globalTooltip.style.visibility = 'hidden'; // Hide again
+
+                    // Calculate final position
+                    const tooltipLeft = rect.left + scrollX + (rect.width / 2);
+                    const tooltipTop = rect.top + scrollY - tooltipHeight - 5; // 5px margin above visualEl
+
+                    globalTooltip.style.left = `${tooltipLeft}px`;
+                    globalTooltip.style.top = `${tooltipTop}px`;
+                    globalTooltip.style.transform = 'translateX(-50%)'; // Only horizontal centering
+                    globalTooltip.style.opacity = '1';
+                    globalTooltip.style.visibility = 'visible';
+                });
+
+                visualEl.addEventListener('mouseleave', () => {
+                    globalTooltip.style.opacity = '0';
+                    globalTooltip.style.visibility = 'hidden';
                 });
 
                 visualEl.addEventListener('mouseleave', clearTimer);
