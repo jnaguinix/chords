@@ -32,9 +32,14 @@ body {
     padding: 20px;
 }
 
+
 #app {
-    width: 100%;
-    max-width: 900px;
+    /* ANTES: width: 100% */
+    width: 95%; /* Ocupa casi todo el ancho, pero deja un pequeño margen a los lados */
+
+    /* ANTES: max-width: 900px */
+    max-width: 1400px; /* Un límite mucho más generoso para pantallas anchas */
+    
     text-align: center;
 }
 
@@ -264,29 +269,10 @@ select:focus, textarea:focus {
 }
 
 /* --- Composer Mode Styles --- */
-.sequence-container {
-    display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
-    margin: 20px 0; padding: 10px; min-height: 40px;
-    background-color: var(--bg-card);
-    border-radius: 8px;
+#composer-controls {
+    display: none;
 }
-.sequence-item {
-    display: flex; align-items: center; background-color: var(--grey);
-    padding: 5px 10px; border-radius: 5px; font-size: 0.9rem;
-    cursor: grab;
-    transition: background-color 0.2s, opacity 0.2s;
-}
-.sequence-item.dragging {
-    opacity: 0.4;
-    background-color: var(--accent-green);
-    cursor: grabbing;
-}
-.sequence-item .remove-btn {
-    margin-left: 10px; background: none; border: none;
-    color: var(--text-muted-color); cursor: pointer;
-    font-size: 1.2rem; line-height: 1;
-}
-.sequence-item .remove-btn:hover { color: var(--text-main); }
+
 
 .composition-actions {
     display: flex;
@@ -295,61 +281,7 @@ select:focus, textarea:focus {
     margin-top: 20px;
 }
 
-/* --- Interactive Composition Output --- */
-#composition-output {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 30px;
-}
-
-/* Override for song sheet view inside composer */
-#composition-output.song-sheet-container {
-    display: block;
-}
-
-.composer-chord-action {
-    background-color: var(--bg-card);
-    border: 1px solid var(--grey);
-    color: var(--interactive-blue);
-    font-family: 'IBM Plex Mono', monospace;
-    font-weight: 500;
-    padding: 10px 15px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
-}
-
-.composer-chord-action:hover {
-    background-color: var(--grey);
-    border-color: var(--interactive-blue);
-    color: var(--white);
-}
-
-.mini-piano { 
-    display: flex;
-    margin: 0 auto;
-    padding: 0; 
-    background: none; 
-    box-shadow: none; 
-    border-radius: 12px; 
-    overflow: hidden; 
-    height: 74px;
-    width: fit-content;
-    border: 1px solid var(--grey);
-}
-.mini-piano .key { transition: background-color 0.2s; }
-.mini-piano .white { height: 100%; width: 19px; background: var(--white); cursor: default !important; }
-.mini-piano .white:not(:last-child) { border-right: 1px solid var(--grey); }
-.mini-piano .black { height: 60%; width: 11px; background: var(--black); top: 0; cursor: default !important; }
-.mini-piano .white .black { 
-    left: calc(19px - (11px / 2)); 
-}
-.mini-piano .key.pressed { background: var(--accent-green); }
-.mini-piano .key.bass-note { background: var(--accent-orange); }
-
-/* Extractor Mode Styles */
+/* --- Extractor Mode Styles --- */
 #song-input {
     width: 100%;
     min-height: 200px;
@@ -384,58 +316,149 @@ select:focus, textarea:focus {
     to { transform: rotate(360deg); }
 }
 
+/* ==========================================================================
+   Estilos UNIFICADOS para las Partituras (Song Sheet)
+   ========================================================================== */
+
+/* El contenedor de la partitura. Le damos un scroll si el contenido se desborda. */
 .song-sheet-container {
     text-align: left;
     background-color: var(--bg-card);
     border-radius: 8px;
-    padding: 10px 30px;
+    padding: 20px 30px;
     margin-top: 20px;
     font-family: 'IBM Plex Mono', monospace;
-    white-space: pre-wrap;
-    font-size: 1rem;
     overflow-x: auto;
 }
+
+#composition-output.song-sheet-container {
+    margin-top: 30px;
+}
+
 .song-line {
     position: relative;
-    padding-top: 1.4em;
-    margin-bottom: 0.6em;
+    padding-top: 2em; /* He notado que en tu archivo anterior era 2em, lo respeto */
+    margin-bottom: 0.8em;
+    width: fit-content; 
+    min-width: 100%;
+    
+    /* === AÑADE ESTA LÍNEA === */
+    z-index: 1; /* Establece la capa base para todas las líneas */
+}
+.song-line:hover {
+    /* Cuando el ratón está sobre esta línea, la pone por encima de las demás */
+    z-index: 2;
 }
 
-.chord-action, .chord-annotation {
+.lyrics-layer {
+    white-space: pre;
+    cursor: text;
+    line-height: 1.5;
+    color: #ccc;
+}
+
+.chords-layer {
     position: absolute;
     top: 0;
-    font-weight: 700;
-    padding: 2px 4px;
-    border-radius: 4px;
-    user-select: none;
-    white-space: pre;
-    line-height: 1;
+    left: 0;
+    height: 1.5em;
+    pointer-events: none;
+    /* CORRECCIÓN: Se elimina 'width: 100%' para que la capa pueda ser tan ancha como la letra. */
 }
 
-.chord-action {
-    color: var(--interactive-blue);
+.chord-positioner {
+    position: absolute;
+    top: 0;
+    pointer-events: auto;
+}
+
+.chord-visual {
+    display: inline-block;
     cursor: pointer;
+    color: var(--interactive-blue);
+    font-weight: bold;
+    user-select: none;
+    white-space: nowrap;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 4px;
     transition: color 0.2s, background-color 0.2s;
 }
 
-.chord-action:hover {
+.chord-visual:hover {
     color: var(--interactive-blue-hover);
     background-color: rgba(140, 180, 255, 0.1);
 }
 
-.chord-annotation {
+.chord-visual.chord-annotation {
     color: var(--text-muted-color);
     cursor: default;
 }
 
-.chord-action.instrumental {
+.chord-visual.chord-annotation:hover {
+    background-color: transparent;
+}
+
+.chord-visual.instrumental {
     color: var(--accent-orange);
     font-style: italic;
 }
-.chord-action.instrumental:hover {
-    color: #f8be69; /* Lighter orange */
+.chord-visual.instrumental:hover {
+    color: #f8be69;
     background-color: rgba(245, 166, 35, 0.1);
 }
+
+.chord-visual .chord-tooltip {
+    position: absolute;
+    /* CAMBIO: Lo subimos un poco más para que no esté tan pegado */
+    bottom: 140%; 
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    /* CAMBIO: Le damos más espacio interior (padding) */
+    padding: 8px 14px; 
+    border-radius: 6px; /* Un poco más redondeado */
+    /* CAMBIO: ¡Aumentamos el tamaño de la fuente! */
+    font-size: 2.8rem; 
+    font-weight: 500; /* Un peso medio para que sea legible */
+    white-space: nowrap;
+    z-index: 10;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s, bottom 0.2s; /* Transición más suave */
+    pointer-events: none;
+    /* AÑADIDO: Una sombra sutil para que "flote" mejor */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
+}
+
+
+.chord-visual:hover .chord-tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* --- NUEVOS ESTILOS PARA LA INSERCIÓN DE ACORDES --- */
+
+.insert-placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    color: var(--accent-green);
+    border: 1px dashed var(--accent-green);
+    border-radius: 50%;
+    font-size: 20px;
+    line-height: 1;
+    transition: all 0.2s;
+    position: absolute;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 5;
+    opacity: 0;
+}
+
 
 /* --- Chord Inspector Modal --- */
 #chord-inspector-overlay, #chord-inspector-modal {
@@ -467,10 +490,12 @@ select:focus, textarea:focus {
     transform: translate(-50%, -50%) scale(0.95);
     background-color: var(--bg-card);
     border-radius: 20px;
-    padding: 20px;
+    padding: 25px;
     z-index: 101;
     box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-    min-width: 300px;
+    min-width: 350px;
+    width: 90%;
+    max-width: 650px;
     transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
 }
 
@@ -482,16 +507,32 @@ select:focus, textarea:focus {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
     padding-bottom: 15px;
     border-bottom: 1px solid var(--grey);
+    margin-bottom: 20px;
+    gap: 15px;
 }
 
 #chord-inspector-title {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.5rem;
     font-weight: 500;
-    color: var(--text-main);
+    margin-right: auto;
+}
+
+#chord-inspector-close-btn {
+    background: none; border: none;
+    color: var(--text-muted-color);
+    font-size: 2.2rem; cursor: pointer;
+    line-height: 1; padding: 0 5px;
+    transition: color 0.2s;
+}
+#chord-inspector-close-btn:hover { color: var(--white); }
+
+#chord-inspector-piano {
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: center;
 }
 
 .play-btn {
@@ -519,29 +560,78 @@ select:focus, textarea:focus {
 }
 
 #chord-inspector-play-btn {
-    position: static;
-    margin: 0 15px 0 auto;
-    width: 30px;
-    height: 30px;
+    width: 40px; height: 40px;
 }
-#chord-inspector-play-btn svg { width: 14px; height: 14px; margin-left: 2px; }
-
-#chord-inspector-close-btn {
-    background: none;
-    border: none;
-    color: var(--text-muted-color);
-    font-size: 2rem;
-    cursor: pointer;
-    line-height: 1;
-    padding: 0 5px;
-    transition: color 0.2s;
-}
-#chord-inspector-close-btn:hover {
-    color: var(--white);
-}
+#chord-inspector-play-btn svg { width: 16px; height: 16px; margin-left: 3px; }
 
 #transposition-controls span {
     color: var(--text-main);
     font-weight: 500;
     min-width: 150px;
+}
+
+.inspector-controls {
+    display: flex;
+    justify-content: space-around;
+    gap: 15px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.inspector-controls .select-wrapper {
+    flex-grow: 1;
+    min-width: 150px;
+}
+
+#chord-inspector-piano {
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+#chord-inspector-modal .piano {
+    padding: 15px;
+    margin: 0;
+}
+
+#chord-inspector-modal .piano .white {
+    width: 30px;
+    height: 140px;
+}
+
+#chord-inspector-modal .piano .black {
+    width: 18px;
+    height: 85px;
+}
+
+#chord-inspector-modal .piano .white .black {
+    left: calc(30px - (18px / 2));
+}
+
+#chord-inspector-modal .piano .note-name {
+    display: none;
+}
+
+/* --- LA MAGIA: ESTILOS DE TAMAÑO PARA CADA MODO --- */
+
+/* === ESTILOS PARA EL EXTRACTOR (TAMAÑO ESTÁNDAR) === */
+#extractor-mode .lyrics-layer,
+#extractor-mode .chords-layer {
+    font-size: 1.3em; 
+}
+#extractor-mode .chord-visual {
+    font-size: 1rem;
+    transform: scale(0.77);
+    transform-origin: top left;
+}
+
+
+/* === ESTILOS PARA EL COMPOSITOR (TAMAÑO EXTRA GRANDE) === */
+#composer-mode .lyrics-layer,
+#composer-mode .chords-layer {
+    font-size: 2.0em; 
+}
+#composer-mode .chord-visual {
+    font-size: 2.0rem; 
+    transform: scale(0.5);
+    transform-origin: top left;
 }

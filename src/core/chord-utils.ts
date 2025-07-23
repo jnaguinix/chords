@@ -1,45 +1,86 @@
-// CORRECCIÓN 1: Se eliminó IS_BLACK_KEY de esta importación.
-import { NOTE_TO_INDEX, MUSICAL_INTERVALS, INDEX_TO_DISPLAY_NAME, CHORD_TYPE_MAP } from '../constants';
+import { NOTE_TO_INDEX, MUSICAL_INTERVALS, INDEX_TO_DISPLAY_NAME, CHORD_TYPE_MAP, CHORD_TYPE_TO_SUFFIX } from '../constants';
 import type { SequenceItem, ProcessedSong, SongLine, SongChord } from '../types';
 
-// CORRECCIÓN 2: Se eliminó el parámetro 'forVisualsOnly' que ya no se usa.
+// Un mapa para convertir alteraciones de texto a semitonos.
+const ALTERATION_TO_SEMITONES: { [key: string]: number } = {
+    'b5': -1, '#5': 1, 'b9': -1, '#9': 1, '#11': 1
+};
+
+// Un mapa para saber el intervalo base de las tensiones más comunes.
+const DEGREE_TO_INTERVAL: { [key: number]: number } = {
+    5: 7,   // La 5ta está a 7 semitonos
+    9: 14,  // La 9na está a 14 semitonos (una octava + una 2da mayor)
+    11: 17, // La 11va está a 17 semitonos
+    13: 21, // La 13va está a 21 semitonos
+};
+
+
 export function getChordNotes(item: SequenceItem): { notesToPress: number[], bassNoteIndex: number | null, allNotesForRange: number[] } {
+    if (!item.rootNote || !item.type) {
+        return { notesToPress: [], bassNoteIndex: null, allNotesForRange: [] };
+    }
     const rootNoteIndex = NOTE_TO_INDEX[item.rootNote];
     const intervals = MUSICAL_INTERVALS[item.type];
     if (rootNoteIndex === undefined || !intervals) {
         return { notesToPress: [], bassNoteIndex: null, allNotesForRange: [] };
     }
 
-    // 1. Empezamos con el acorde en su posición fundamental en una octava intermedia (C3).
     const chordBaseAbsoluteIndex = rootNoteIndex + 12 * 3; // Octava C3
-    const fundamentalChordNotes = intervals.map(interval => chordBaseAbsoluteIndex + interval);
-    fundamentalChordNotes.sort((a, b) => a - b);
+    const fundamentalChordNotes = intervals.map((interval: number) => chordBaseAbsoluteIndex + interval);
+    
+    // Lógica de alteraciones mejorada
+    if (item.alterations) {
+        item.alterations.forEach((alt: string) => {
+            const semitoneChange = ALTERATION_TO_SEMITONES[alt];
+            if (semitoneChange === undefined) return;
 
-    // 2. Calculamos y "bloqueamos" la posición del bajo AHORA, basándonos en el acorde fundamental.
+            const degree = parseInt(alt.replace(/[^0-9]/g, ''), 10);
+            
+            if (degree === 5) {
+                const fifthIntervalIndex = intervals.indexOf(7);
+                if (fifthIntervalIndex !== -1) {
+                    fundamentalChordNotes[fifthIntervalIndex] += semitoneChange;
+                }
+            } 
+            else if (DEGREE_TO_INTERVAL[degree]) {
+                const baseInterval = DEGREE_TO_INTERVAL[degree];
+                const newNote = chordBaseAbsoluteIndex + baseInterval + semitoneChange;
+                fundamentalChordNotes.push(newNote);
+            }
+        });
+    }
+
+    fundamentalChordNotes.sort((a: number, b: number) => a - b);
+
     let bassAbsoluteIndex: number | null = null;
     const bassNoteName = item.bassNote || item.rootNote;
     const bassNoteIndexMod12 = NOTE_TO_INDEX[bassNoteName];
 
     if (bassNoteIndexMod12 !== undefined) {
-        const lowestFundamentalNote = fundamentalChordNotes[0];
-        // Colocamos el bajo en la octava inmediatamente inferior a la del acorde fundamental.
-        let tempBassIndex = bassNoteIndexMod12 + (Math.floor(lowestFundamentalNote / 12)) * 12;
-        if (tempBassIndex >= lowestFundamentalNote) {
+        // --- LÓGICA DE BAJO CORREGIDA PARA CONSISTENCIA ---
+        const lowestChordNote = Math.min(...fundamentalChordNotes);
+        
+        // Empezamos calculando el bajo en la misma octava que la nota más grave del acorde.
+        let tempBassIndex = bassNoteIndexMod12 + (Math.floor(lowestChordNote / 12)) * 12;
+
+        // Si el bajo no es estrictamente más grave que la nota más grave del acorde,
+        // lo bajamos una octava para asegurar que sea la verdadera nota más grave.
+        if (tempBassIndex >= lowestChordNote) {
             tempBassIndex -= 12;
         }
-        bassAbsoluteIndex = tempBassIndex; // ¡Bajo bloqueado!
+        
+        bassAbsoluteIndex = tempBassIndex;
     }
 
-    // 3. AHORA, tomamos las notas del acorde y les aplicamos la inversión.
-    let chordAbsoluteIndices = [...fundamentalChordNotes]; // Hacemos una copia para invertirla.
+
+    let chordAbsoluteIndices = [...fundamentalChordNotes];
     if (item.inversion && item.inversion > 0) {
         for (let i = 0; i < item.inversion; i++) {
-            // La lógica de inversión sube la nota más grave una octava.
-            const lowestNote = chordAbsoluteIndices.shift(); // Extrae la primera (más grave)
+            const lowestNote = chordAbsoluteIndices.shift();
             if (lowestNote !== undefined) {
                 chordAbsoluteIndices.push(lowestNote + 12);
             }
-            chordAbsoluteIndices.sort((a, b) => a - b); // Reordenar para la siguiente inversión
+            chordAbsoluteIndices.sort((a: number, b: number) => a - b);
         }
     }
     
@@ -52,52 +93,102 @@ export function getChordNotes(item: SequenceItem): { notesToPress: number[], bas
 }
 
 
+export function formatChordName(item: SequenceItem, options: { style: 'short' | 'long' }): string {
+    if (!item) return '';
+
+    if (!item.rootNote || !item.type) {
+        return item.raw || '';
+    }
+
+    const { rootNote, type, bassNote, inversion, alterations } = item;
+    
+    if (options.style === 'short') {
+        const suffix = CHORD_TYPE_TO_SUFFIX[type] ?? '';
+        let displayName = rootNote + suffix;
+
+        if (alterations && alterations.length > 0) {
+            displayName += `(${alterations.join(',')})`;
+        }
+
+        if (bassNote && bassNote !== rootNote) {
+            displayName += `/${bassNote}`;
+        }
+        return displayName;
+    }
+
+    if (options.style === 'long') {
+        let displayName = `${rootNote} ${type}`;
+        if (alterations && alterations.length > 0) {
+            displayName += ` con alteraciones ${alterations.join(', ')}`;
+        }
+        if (bassNote && bassNote !== rootNote) {
+            displayName += ` / ${bassNote}`;
+        }
+        if (inversion && inversion > 0) {
+            displayName += ` (${inversion}ª Inv.)`;
+        }
+        return displayName;
+    }
+
+    return ''; 
+}
+
 export function parseChordString(chord: string): SequenceItem | null {
     const sanitizedChord = chord.trim();
     if (!sanitizedChord) return null;
 
-    const parts = sanitizedChord.split('/');
-    let mainChord = parts[0].trim();
-    const bassNote = parts.length > 1 ? parts[1].trim() : undefined;
-    let rootNote: string;
-    let typeSuffix: string;
-    let inversion: number | undefined;
+    const chordRegex = /^([A-G][#b]?)([^/()]*)(?:\(([^)]+)\))?(?:\/([A-G][#b]?))?/;
+    const match = sanitizedChord.match(chordRegex);
 
-    // Extract inversion first
-    const inversionMatch = mainChord.match(/\^(\d+)$/);
-    if (inversionMatch) {
-        inversion = parseInt(inversionMatch[1], 10);
-        mainChord = mainChord.substring(0, inversionMatch.index);
+    if (!match) return null;
+
+    const [, rootNote, rawSuffix, alterationsStr, bassNote] = match;
+    let typeSuffix = rawSuffix.trim();
+
+    if (typeSuffix === 'sus') {
+        typeSuffix = 'sus4';
     }
 
-    if (mainChord.length > 1 && (mainChord[1] === '#' || mainChord[1] === 'b')) {
-        rootNote = mainChord.substring(0, 2);
-        typeSuffix = mainChord.substring(2);
-    } else {
-        rootNote = mainChord.substring(0, 1);
-        typeSuffix = mainChord.substring(1);
+    if (NOTE_TO_INDEX[rootNote] === undefined || (bassNote && NOTE_TO_INDEX[bassNote] === undefined)) {
+        return null;
     }
 
-    if (NOTE_TO_INDEX[rootNote] === undefined || (bassNote && NOTE_TO_INDEX[bassNote] === undefined)) return null;
-    
-    // Check for exact suffix matches first (most specific to least specific)
-    for (const key of Object.keys(CHORD_TYPE_MAP).sort((a, b) => b.length - a.length)) {
-        if (typeSuffix === key) {
-            return { rootNote, type: CHORD_TYPE_MAP[key], bassNote, inversion };
+    const alterations = alterationsStr ? alterationsStr.replace(/\s/g, '').split(',') : undefined;
+
+    if (alterations) {
+        const combinedSuffix = typeSuffix + alterations.join('');
+        if (CHORD_TYPE_MAP[combinedSuffix]) {
+            return {
+                raw: chord,
+                rootNote,
+                type: CHORD_TYPE_MAP[combinedSuffix],
+                bassNote,
+            };
+        }
+    }
+
+    const sortedSuffixes = Object.keys(CHORD_TYPE_MAP).sort((a, b) => b.length - a.length);
+    for (const suffix of sortedSuffixes) {
+        if (typeSuffix === suffix) {
+            return { 
+                raw: chord, 
+                rootNote, 
+                type: CHORD_TYPE_MAP[suffix], 
+                bassNote, 
+                alterations
+            };
         }
     }
     
-    // If no suffix, it's a major chord
     if (typeSuffix === '') {
-        return { rootNote, type: 'Mayor', bassNote, inversion };
+        return { raw: chord, rootNote, type: 'Mayor', bassNote, alterations };
     }
 
-    return null; // Return null if suffix is not recognized
+    return null;
 }
 
 
 export function parseSongText(songText: string): ProcessedSong {
-    // Replace tabs with 4 spaces to ensure consistent alignment.
     songText = songText.replace(/\t/g, '    ');
     
     const rawLines = songText.split('\n');
@@ -105,73 +196,77 @@ export function parseSongText(songText: string): ProcessedSong {
     const allChords: SequenceItem[] = [];
 
     const isChordLine = (line: string): boolean => {
-        const tokens = line.trim().split(/\s+/).filter(Boolean);
+        const cleanLine = line.replace(/[-–|]/g, ' ').trim();
+        const tokens = cleanLine.split(/\s+/).filter(Boolean);
         if (tokens.length === 0) return false;
         
-        const chordCount = tokens.filter(token => {
-            const parsed = parseChordString(token);
-            // Consider it a valid chord if it parses OR it's an annotation in parentheses
-            return parsed !== null || (token.startsWith('(') && token.endsWith(')'));
-        }).length;
-
-        // A line is a chord line if it has at least one valid-looking token
-        // and the proportion of such tokens is high. This handles lines with mixed annotations.
-        return chordCount > 0 && (chordCount / tokens.length) >= 0.5;
+        const chordCount = tokens.filter(token => parseChordString(token) !== null).length;
+        
+        return chordCount > 0 && (chordCount / tokens.length) >= 0.7;
     };
 
     let i = 0;
     while (i < rawLines.length) {
-        let currentLine = rawLines[i];
-        
-        if (isChordLine(currentLine)) {
-            // Expand parenthesized chords, e.g., (G-A) becomes G A
-            currentLine = currentLine.replace(/\(([^)]+)\)/g, (_match, inner) => {
-                return ` ${inner.replace(/-/g, ' ')} `;
-            });
+        const originalLine = rawLines[i];
+        let lineToProcess = originalLine;
 
+        lineToProcess = lineToProcess.replace(/([A-G][#b]?[^/\s()]*)\s+(\([^)]+\))/g, '$1$2');
+        lineToProcess = lineToProcess.replace(/\s+\/\s+/g, '/');
+
+        const labelRegex = /^(\s*(?:\[[^\]]+\]|[^:]+:)\s*)/;
+        const labelMatch = lineToProcess.match(labelRegex);
+        let label = '';
+        let chordOffset = 0; 
+
+        if (labelMatch) {
+            label = labelMatch[0].trim();
+            lineToProcess = lineToProcess.substring(labelMatch[0].length);
+            chordOffset = labelMatch[0].length;
+        }
+
+        if (isChordLine(lineToProcess)) {
             const songChords: SongChord[] = [];
+            
+            if (label) {
+                const annotationItem: SequenceItem = { raw: label, rootNote: '', type: '' };
+                songChords.push({ chord: annotationItem, position: 0, isAnnotation: true });
+            }
+
+            const cleanChordLine = lineToProcess.replace(/[-–|]/g, ' ');
             const chordRegex = /(\S+)/g;
             let match;
-            while ((match = chordRegex.exec(currentLine)) !== null) {
+            while ((match = chordRegex.exec(cleanChordLine)) !== null) {
                 const chordStr = match[1];
                 const parsedChord = parseChordString(chordStr);
+                const finalPosition = match.index + chordOffset;
+
                 if (parsedChord) {
-                    songChords.push({ chord: chordStr, position: match.index });
+                    songChords.push({ chord: parsedChord, position: finalPosition });
                     allChords.push(parsedChord);
                 } else {
-                    // This is an annotation like (Intro) or some other non-chord text
-                    songChords.push({ chord: chordStr, position: match.index, isAnnotation: true });
+                    const annotationItem: SequenceItem = { raw: chordStr, rootNote: '', type: '' };
+                    songChords.push({ chord: annotationItem, position: finalPosition, isAnnotation: true });
                 }
             }
 
             const nextLine = (i + 1 < rawLines.length) ? rawLines[i + 1] : null;
             
-            // If the next line exists and is NOT a chord line, pair them up.
             if (nextLine !== null && !isChordLine(nextLine)) {
-                processedLines.push({
-                    lyrics: nextLine.trimEnd(),
-                    chords: songChords,
-                    isInstrumental: false
-                });
-                i += 2; // Move past both chord and lyric lines
+                processedLines.push({ lyrics: nextLine, chords: songChords, isInstrumental: false });
+                i += 2;
             } else {
-                // This is an instrumental line (or the last line of the song)
-                processedLines.push({
-                    lyrics: '', // No lyrics associated
-                    chords: songChords,
-                    isInstrumental: true
-                });
-                i += 1; // Move past only the chord line
+                processedLines.push({ lyrics: '', chords: songChords, isInstrumental: true });
+                i += 1;
             }
         } else {
-            // This is a line of lyrics, comments, or an empty line
-            processedLines.push({
-                lyrics: currentLine.trimEnd(),
-                chords: [],
-                isInstrumental: false
-            });
+            processedLines.push({ lyrics: originalLine, chords: [], isInstrumental: false });
             i += 1;
         }
+    }
+
+    if (processedLines.length > 0 && (processedLines[0].lyrics.trim() !== '' || processedLines[0].chords.length > 0)) {
+        const emptyLine: SongLine = { lyrics: '', chords: [], isInstrumental: false };
+        processedLines.unshift(emptyLine);
     }
 
     return { lines: processedLines, allChords };
@@ -185,100 +280,39 @@ function transposeNote(note: string, semitones: number): string {
     return INDEX_TO_DISPLAY_NAME[newIndex];
 };
 
-export function applyTransposition(originalSong: ProcessedSong, transpositionOffset: number): ProcessedSong {
-    const transposedSong: ProcessedSong = JSON.parse(JSON.stringify(originalSong));
-    
-    transposedSong.allChords.forEach(chord => {
+export function applyTransposition(songToTranspose: ProcessedSong, transpositionOffset: number): ProcessedSong {
+    const updateChord = (chord: SequenceItem) => {
+        if (!chord.rootNote) return;
         chord.rootNote = transposeNote(chord.rootNote, transpositionOffset);
         if (chord.bassNote) {
             chord.bassNote = transposeNote(chord.bassNote, transpositionOffset);
         }
-    });
-
-    transposedSong.lines.forEach(line => {
-        line.chords.forEach(songChord => {
-            if (songChord.isAnnotation) {
-                return; // Don't transpose annotations
-            }
-            const parsed = parseChordString(songChord.chord);
-            if (parsed) {
-                const newRoot = transposeNote(parsed.rootNote, transpositionOffset);
-                let suffix = '';
-                
-                // Find the original short-hand suffix for the chord type
-                for (const key in CHORD_TYPE_MAP) {
-                    if (CHORD_TYPE_MAP[key] === parsed.type) {
-                        suffix = key;
-                        break;
-                    }
-                }
-                 if (parsed.type === 'Mayor' && suffix === '') {
-                    // This handles plain major chords correctly
-                 } else if (parsed.type === 'Menor' && suffix === 'm') {
-                    // This handles plain minor chords
-                 } else if (!suffix) {
-                    // Fallback for types that don't have a direct suffix in the map, though this should be rare.
-                    // Let's try to build one from the type name if possible.
-                    if (parsed.type === 'Mayor') suffix = '';
-                    else if (parsed.type === 'Menor') suffix = 'm';
-                 }
-
-
-                if (parsed.bassNote) {
-                    const newBass = transposeNote(parsed.bassNote, transpositionOffset);
-                    songChord.chord = `${newRoot}${suffix}/${newBass}`;
-                } else {
-                    songChord.chord = newRoot + suffix;
-                }
-            }
-        });
-    });
-    
-    return transposedSong;
+    };
+    songToTranspose.allChords.forEach(updateChord);
+    return songToTranspose;
 }
 
-/**
- * Calcula un rango de piano óptimo para visualizar un conjunto de notas.
- * Asegura un número mínimo de teclas y centra el acorde.
- * @param allNotes - Un array de todos los índices de notas MIDI a considerar para el rango.
- * @param minWhiteKeys - El número mínimo de teclas blancas que deben ser visibles.
- * @param horizontalPaddingSemitones - Un pequeño margen en semitonos a cada lado.
- * @returns Un objeto { startNote, endNote } con el rango de piano óptimo en índices MIDI.
- */
 export function calculateOptimalPianoRange(
     allNotes: number[],
-    minWhiteKeys: number = 20, // Aprox. 3 octavas de teclas blancas
-    horizontalPaddingSemitones: number = 5 // Un padding de 5 semitonos (aprox. 3 teclas blancas)
+    minWhiteKeys: number = 20,
+    horizontalPaddingSemitones: number = 5
 ): { startNote: number; endNote: number } {
-    
     if (allNotes.length === 0) {
-        return { startNote: 48, endNote: 83 }; // Rango por defecto C3-B5
+        return { startNote: 48, endNote: 83 };
     }
-
     const minNote = Math.min(...allNotes);
     const maxNote = Math.max(...allNotes);
-
-    // 1. Calcular el rango inicial ajustado al acorde con un padding.
     let startNote = minNote - horizontalPaddingSemitones;
     let endNote = maxNote + horizontalPaddingSemitones;
-
-    // 2. Calcular el número mínimo de semitonos necesarios para mostrar `minWhiteKeys`.
     const requiredSemitoneSpan = Math.ceil(minWhiteKeys * (12 / 7));
     const currentSemitoneSpan = endNote - startNote;
-
-    // 3. Si el rango actual es más pequeño que el mínimo requerido, expandirlo.
     if (currentSemitoneSpan < requiredSemitoneSpan) {
-        // CORRECCIÓN 3: Se eliminó la variable 'deficit' que no se usaba.
         const centerPoint = Math.round((minNote + maxNote) / 2);
-
         startNote = centerPoint - Math.ceil(requiredSemitoneSpan / 2);
         endNote = centerPoint + Math.floor(requiredSemitoneSpan / 2);
     }
-    
-    // 4. Asegurar que el rango no se salga de los límites de un piano estándar (A0-C8)
     const PIANO_MIN_MIDI = 21;
     const PIANO_MAX_MIDI = 108;
-
     return {
         startNote: Math.max(PIANO_MIN_MIDI, Math.round(startNote)),
         endNote: Math.min(PIANO_MAX_MIDI, Math.round(endNote)),

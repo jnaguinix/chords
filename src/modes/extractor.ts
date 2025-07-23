@@ -1,5 +1,10 @@
+// extractor.ts (Versión Final y Corregida)
+
+// CAMBIO: Eliminamos 'recalculateChordLayout' de la importación
 import { applyTransposition, parseSongText } from '../core/chord-utils';
-import type { ProcessedSong, SequenceItem, SongLine } from '../types';
+import { createSongSheet } from '../core/piano-renderer'; 
+import type { ProcessedSong, SequenceItem, ShowInspectorFn } from '../types';
+import type { AudioEngine } from '../core/audio';
 
 interface ExtractorDOMElements {
     songInput: HTMLTextAreaElement;
@@ -14,21 +19,27 @@ interface ExtractorDOMElements {
 }
 
 interface ExtractorCallbacks {
-    showInspector: (item: SequenceItem) => void;
+    showInspector: ShowInspectorFn;
     addToComposer: (song: ProcessedSong) => void;
 }
 
 export class Extractor {
     private elements: ExtractorDOMElements;
     private callbacks: ExtractorCallbacks;
-    
+    private audioEngine: AudioEngine;
     private originalParsedSong: ProcessedSong | null = null;
     private currentDisplayedSong: ProcessedSong | null = null;
     private transpositionOffset = 0;
+    private nextChordId = 0;
 
-    constructor(elements: ExtractorDOMElements, callbacks: ExtractorCallbacks) {
+    constructor(
+        elements: ExtractorDOMElements, 
+        callbacks: ExtractorCallbacks,
+        audioEngine: AudioEngine
+    ) {
         this.elements = elements;
         this.callbacks = callbacks;
+        this.audioEngine = audioEngine;
     }
 
     public init(): void {
@@ -40,13 +51,11 @@ export class Extractor {
         this.elements.addToComposerBtn.addEventListener('click', this.handleAddToComposer);
         this.elements.transposeUpBtn.addEventListener('click', () => this.handleTranspose(1));
         this.elements.transposeDownBtn.addEventListener('click', () => this.handleTranspose(-1));
-        this.elements.songOutput.addEventListener('click', this.handleChordClick);
     }
 
     private handleProcessSong = (): void => {
         const songText = this.elements.songInput.value;
         if (!songText.trim()) return;
-
         this.elements.loader.style.display = 'flex';
         this.elements.songOutput.innerHTML = '';
         this.elements.addToComposerBtn.disabled = true;
@@ -56,6 +65,21 @@ export class Extractor {
         setTimeout(() => {
             try {
                 this.originalParsedSong = parseSongText(songText);
+                
+                // CAMBIO: Añadimos una comprobación para asegurar que la canción se procesó bien
+                if (!this.originalParsedSong) {
+                    throw new Error("La canción no pudo ser procesada.");
+                }
+
+                this.nextChordId = 0;
+                this.originalParsedSong.lines.forEach(line => {
+                    line.chords.forEach(songChord => {
+                        if (!songChord.isAnnotation && songChord.chord) {
+                            songChord.chord.id = this.nextChordId++;
+                        }
+                    });
+                });
+                
                 this.transpositionOffset = 0;
                 this.updateDisplayedSong();
                 this.elements.addToComposerBtn.disabled = !this.currentDisplayedSong || this.currentDisplayedSong.allChords.length === 0;
@@ -67,14 +91,22 @@ export class Extractor {
                 this.elements.loader.style.display = 'none';
                 this.elements.processSongBtn.disabled = false;
             }
-        }, 200);
+        }, 50);
     }
 
     private updateDisplayedSong = (): void => {
         if (!this.originalParsedSong) return;
         
-        this.currentDisplayedSong = applyTransposition(this.originalParsedSong, this.transpositionOffset);
-        this.renderSongSheet(this.currentDisplayedSong.lines);
+        const songToTranspose = JSON.parse(JSON.stringify(this.originalParsedSong));
+        this.currentDisplayedSong = applyTransposition(songToTranspose, this.transpositionOffset);
+        
+        // CAMBIO: Comprobamos que la canción a mostrar no sea null antes de usarla
+        if (this.currentDisplayedSong) {
+            createSongSheet(this.elements.songOutput, this.currentDisplayedSong.lines, {
+                onShortClick: this.onShortClick,
+                onLongClick: this.onLongClick,
+            });
+        }
         
         if (this.transpositionOffset === 0) {
             this.elements.transpositionDisplay.textContent = 'Tonalidad Original';
@@ -84,39 +116,10 @@ export class Extractor {
         }
     }
 
-    private renderSongSheet(lines: SongLine[]): void {
-        this.elements.songOutput.innerHTML = '';
-        this.elements.songOutput.className = 'song-sheet-container'; // Ensure class is set
-        let chordRenderIndex = 0;
-        lines.forEach(line => {
-            const lineDiv = document.createElement('div');
-            lineDiv.className = 'song-line';
-            lineDiv.textContent = line.lyrics || '\u00A0'; // Use non-breaking space for empty lines 
-            line.chords.forEach(chord => {
-                const chordSpan = document.createElement('span');
-                
-                if (chord.isAnnotation) {
-                    chordSpan.className = 'chord-annotation';
-                } else {
-                    chordSpan.className = 'chord-action';
-                    if (line.isInstrumental) {
-                        chordSpan.classList.add('instrumental');
-                    }
-                    chordSpan.dataset.chordIndex = chordRenderIndex.toString();
-                    chordRenderIndex++;
-                }
-
-                chordSpan.textContent = chord.chord;
-                chordSpan.style.left = `${chord.position}ch`;
-                lineDiv.appendChild(chordSpan);
-            });
-            this.elements.songOutput.appendChild(lineDiv);
-        });
-    }
-
     private handleAddToComposer = (): void => {
+        // CAMBIO: Tu comprobación original ya era correcta, la mantenemos.
         if (this.currentDisplayedSong) {
-            this.callbacks.addToComposer(this.currentDisplayedSong);
+            this.callbacks.addToComposer(JSON.parse(JSON.stringify(this.currentDisplayedSong)));
         }
     }
 
@@ -126,20 +129,12 @@ export class Extractor {
         this.updateDisplayedSong();
     }
 
-    private handleChordClick = (e: Event): void => {
-        const target = e.target as HTMLElement;
-        const chordActionEl = target.closest('.chord-action');
-        if (chordActionEl && this.currentDisplayedSong) {
-            const chordIndexStr = (chordActionEl as HTMLElement).dataset.chordIndex;
-            if(chordIndexStr) {
-                const chordIndex = parseInt(chordIndexStr, 10);
-                if (!isNaN(chordIndex)) {
-                    const item = this.currentDisplayedSong.allChords[chordIndex];
-                    if (item) {
-                        this.callbacks.showInspector(item);
-                    }
-                }
-            }
-        }
+    private onShortClick = (item: SequenceItem): void => {
+        this.audioEngine.playChord(item);
+    }
+
+    private onLongClick = (item: SequenceItem): void => {
+        // CAMBIO: Añadimos los callbacks vacíos para que coincida con el tipo ShowInspectorFn
+        this.callbacks.showInspector(item, {});
     }
 }
