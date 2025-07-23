@@ -33,7 +33,7 @@ body {
     justify-content: center;
     align-items: flex-start;
     min-height: 100vh;
-    padding: 40px 20px; /* Más padding en el body */
+    padding: 25px 20px; /* Más padding en el body */
 }
 
 
