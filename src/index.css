@@ -269,47 +269,51 @@ select:focus, textarea:focus {
 /* MODO COMPOSITOR (CAMBIOS AQUÍ)               */
 /* ============================================ */
 
+/* --- CAMBIO: Se convierte el modo en un contenedor flexible vertical --- */
+#composer-mode.mode-content.active {
+    display: flex;
+    flex-direction: column;
+    /* Define una altura máxima para que no se salga de la pantalla */
+    /* El valor 200px es un aproximado de la altura del header + tabs, ajústalo si es necesario */
+    max-height: calc(100vh - 200px); 
+}
+
 .composition-header {
     display: grid;
     grid-template-columns: 1fr auto;
     align-items: center;
     gap: 2rem;
     margin-bottom: 1.5rem;
+    flex-shrink: 0; /* Evita que el encabezado se encoja */
 }
 
 .piano-container-small {
-    max-width: 450px; /* Reducimos un poco más el tamaño máximo */
+    max-width: 450px;
     min-width: 280px;
     justify-self: center;
 }
 
-/* --- ¡NUEVOS ESTILOS PARA EL PIANO DEL COMPOSITOR! --- */
 .piano-container-small .piano {
-    /* Quitamos el fondo y la caja */
     background: none;
     padding: 0;
     box-shadow: none;
-    margin: 0; /* Eliminamos el margen por defecto */
+    margin: 0;
 }
 
-/* Reducimos el tamaño de las teclas blancas */
 .piano-container-small .piano .white {
     width: 38px;
     height: 170px;
 }
 
-/* Reducimos el tamaño de las teclas negras */
 .piano-container-small .piano .black {
     width: 22px;
     height: 105px;
 }
 
-/* Ajustamos la posición de las teclas negras al nuevo tamaño */
 .piano-container-small .piano .white .black {
     left: calc(38px - (22px / 2));
 }
 
-/* Ocultamos los nombres de las notas en este piano más pequeño */
 .piano-container-small .piano .note-name {
     display: none;
 }
@@ -369,13 +373,16 @@ select:focus, textarea:focus {
     overflow-x: auto;
 }
 
+/* --- CAMBIO: Se hace que la partitura del compositor sea scrollable --- */
 #composition-output.song-sheet-container {
-    margin-top: 30px;
+    margin-top: 0; /* El header ya tiene margen */
+    flex-grow: 1; /* Permite que la partitura ocupe el espacio restante */
+    overflow-y: auto; /* AÑADE EL SCROLL VERTICAL */
 }
 
 .song-line {
     position: relative;
-    padding-top: 2em;
+    padding-top: 1em;
     margin-bottom: 0.8em;
     width: fit-content; 
     min-width: 100%;
@@ -653,16 +660,16 @@ select:focus, textarea:focus {
 
 #composer-mode .lyrics-layer,
 #composer-mode .chords-layer {
-    font-size: 2.0em; 
+    font-size: 1.7em; 
 }
 #composer-mode .chord-visual {
-    font-size: 2.0rem; 
+    font-size: 1.9rem; 
     transform: scale(0.5);
     transform-origin: top left;
 }
 
 /* --- Media query para pantallas pequeñas --- */
-@media (max-width: 600px) {
+@media (max-width: 768px) { /* Ajustado el breakpoint para tablets */
     header h1 {
         font-size: 1.5rem;
     }
