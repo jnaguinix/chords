@@ -1,13 +1,13 @@
 import './index.css';
-import { Visualizer } from './src/modes/visualizer';
-import { Composer } from './src/modes/composer';
-import { Extractor } from './src/modes/extractor';
-import { AudioEngine } from './src/core/audio';
-import { createPiano } from './src/core/piano-renderer';
-import { getChordNotes, calculateOptimalPianoRange } from './src/core/chord-utils';
+import { Visualizer } from './modes/visualizer';
+import { Composer } from './modes/composer';
+import { Extractor } from './modes/extractor';
+import { AudioEngine } from './core/audio';
+import { createPiano } from './core/piano-renderer';
+import { getChordNotes, calculateOptimalPianoRange } from './core/chord-utils';
 // CAMBIO: Importamos la constante correcta de tu archivo para los nombres de las notas
-import { MUSICAL_INTERVALS, INDEX_TO_DISPLAY_NAME } from './src/constants';
-import type { SequenceItem, ProcessedSong, InspectorCallbacks, ShowInspectorFn } from './src/types';
+import { MUSICAL_INTERVALS, INDEX_TO_DISPLAY_NAME } from './constants';
+import type { SequenceItem, ProcessedSong, InspectorCallbacks, ShowInspectorFn } from './types';
 
 class PianoApp {
     private tabs: { [key: string]: HTMLElement };
