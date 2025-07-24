@@ -55,7 +55,7 @@ export function getChordNotes(item: SequenceItem, transpositionOffset: number = 
 
     // Aplica las adiciones (ej. add11)
     if (item.additions) {
-        item.additions.forEach((add: string) => { // <-- CORRECCIÓN DE TIPO 'any'
+        item.additions.forEach((add: string) => {
             const additionInfo = ADDITION_MAP[add];
             if (!additionInfo) return;
             const intervalToAdd = DEGREE_TO_INTERVAL[additionInfo.degree];
@@ -89,10 +89,13 @@ export function getChordNotes(item: SequenceItem, transpositionOffset: number = 
     return { notesToPress: chordAbsoluteIndices, bassNoteIndex: bassAbsoluteIndex, allNotesForRange };
 }
 
-// --- PARSER COMPLETAMENTE REFACTORIZADO ---
 export function parseChordString(chord: string): SequenceItem | null {
     const sanitizedChord = chord.trim();
     if (!sanitizedChord) return null;
+
+    if (sanitizedChord.startsWith('(') && sanitizedChord.endsWith(')')) {
+        return null;
+    }
 
     let bassNote: string | undefined;
     let mainPart = sanitizedChord;
@@ -133,7 +136,6 @@ export function parseChordString(chord: string): SequenceItem | null {
     const alterations: string[] = [];
     const additions: string[] = [];
 
-    // Expresión regular para capturar alteraciones y adiciones
     const modificationRegex = /(#|b)\d+|add\d+/g;
     let match;
     while ((match = modificationRegex.exec(remainingSuffix)) !== null) {
@@ -145,6 +147,11 @@ export function parseChordString(chord: string): SequenceItem | null {
         }
     }
 
+    let finalRemainder = remainingSuffix.replace(modificationRegex, '').trim();
+    if (finalRemainder.length > 0) {
+        return null;
+    }
+
     return { 
         raw: chord, 
         rootNote, 
@@ -154,7 +161,6 @@ export function parseChordString(chord: string): SequenceItem | null {
         additions: additions.length > 0 ? additions : undefined
     };
 }
-
 
 export function formatChordName(item: SequenceItem, options: { style: 'short' | 'long' }, transpositionOffset: number = 0): string {
     if (!item) return '';
@@ -194,64 +200,138 @@ export function parseSongText(songText: string): ProcessedSong {
     const allChords: SequenceItem[] = [];
 
     const isChordLine = (line: string): boolean => {
-        const cleanLine = line.replace(/[-–|]/g, ' ').trim();
-        if (!cleanLine) return false;
-        const tokens = cleanLine.split(/\s+/).filter(Boolean);
+        const trimmedLine = line.trim();
+        if (!trimmedLine) return false;
+
+        if (trimmedLine.match(/^\[[^\]]+\]$/) || trimmedLine.endsWith(':')) {
+            return false;
+        }
+        
+        let contentToAnalyze = trimmedLine;
+        if (trimmedLine.startsWith('//')) {
+            contentToAnalyze = trimmedLine.replace(/^\/\/\s*|\s*\/\/$/g, '').trim();
+        }
+
+        if (!contentToAnalyze) return false;
+
+        const tokens = contentToAnalyze.match(/\([^)]+\)|\S+/g) || [];
         if (tokens.length === 0) return false;
-        const chordCount = tokens.filter(token => parseChordString(token) !== null).length;
-        return chordCount > 0 && (chordCount / tokens.length) >= 0.7;
+
+        let numChordLikeTokens = 0;
+        let numPotentialLyricWords = 0;
+        let totalTokensForRatio = 0;
+
+        for (const token of tokens) {
+            const isParenthesized = token.startsWith('(') && token.endsWith(')');
+            const innerContent = isParenthesized ? token.slice(1, -1) : token;
+            const subTokens = innerContent.split(/[-–|]/g).filter(Boolean);
+            
+            totalTokensForRatio += subTokens.length;
+
+            for (const subToken of subTokens) {
+                if (parseChordString(subToken) !== null) {
+                    numChordLikeTokens++;
+                } else {
+                    const isMusicalAnnotation = isParenthesized || subToken.toLowerCase() === 'n.c.' || subToken.toLowerCase() === 'x';
+                    if (!isMusicalAnnotation) {
+                        numPotentialLyricWords++;
+                    }
+                }
+            }
+        }
+
+        if (numPotentialLyricWords > 0) {
+            return false;
+        }
+
+        return totalTokensForRatio > 0 && (numChordLikeTokens / totalTokensForRatio) >= 0.5;
     };
 
     let i = 0;
     while (i < rawLines.length) {
-        const originalLine = rawLines[i];
-        let lineToProcess = originalLine;
-        lineToProcess = lineToProcess.replace(/([A-G][#b]?[^/\s()]*)\s+(\([^)]+\))/g, '$1$2');
-        lineToProcess = lineToProcess.replace(/\s+\/\s+/g, '/');
-        const labelRegex = /^(\s*(?:\[[^\]]+\]|[^:]+:)\s*)/;
-        const labelMatch = lineToProcess.match(labelRegex);
+        const currentRawLine = rawLines[i];
+        let currentLineChords: SongChord[] = [];
+        let currentLineLyrics = '';
+        let isInstrumental = false;
+        
+        let lineToParseForChords = currentRawLine;
         let label = '';
         let chordOffset = 0;
+
+        const labelRegex = /^(\s*(?:\u005b[^\]]+\u005d|[^:]+:\s*))/;
+        const labelMatch = lineToParseForChords.match(labelRegex);
         if (labelMatch) {
             label = labelMatch[0].trim();
-            lineToProcess = lineToProcess.substring(labelMatch[0].length);
+            lineToParseForChords = lineToParseForChords.substring(labelMatch[0].length);
             chordOffset = labelMatch[0].length;
         }
-        if (isChordLine(lineToProcess)) {
-            const songChords: SongChord[] = [];
+
+        if (isChordLine(lineToParseForChords)) {
             if (label) {
                 const annotationItem: SequenceItem = { raw: label, rootNote: '', type: '' };
-                songChords.push({ chord: annotationItem, position: 0, isAnnotation: true });
+                currentLineChords.push({ chord: annotationItem, position: 0, isAnnotation: true });
             }
-            const cleanChordLine = lineToProcess.replace(/[-–|]/g, ' ');
-            const chordRegex = /(\S+)/g;
+            
+            const chordRegex = /\([^)]+\)|\S+/g;
             let match;
-            while ((match = chordRegex.exec(cleanChordLine)) !== null) {
-                const chordStr = match[1];
-                const parsedChord = parseChordString(chordStr);
-                const finalPosition = match.index + chordOffset;
-                if (parsedChord) {
-                    songChords.push({ chord: parsedChord, position: finalPosition });
-                    allChords.push(parsedChord);
-                } else {
-                    const annotationItem: SequenceItem = { raw: chordStr, rootNote: '', type: '' };
-                    songChords.push({ chord: annotationItem, position: finalPosition, isAnnotation: true });
+            while ((match = chordRegex.exec(lineToParseForChords)) !== null) {
+                if (match[0].trim() === '') continue;
+
+                const token = match[0];
+                const position = match.index + chordOffset;
+                const isParenthesized = token.startsWith('(') && token.endsWith(')');
+                
+                // *** LA SOLUCIÓN DEFINITIVA Y JERÁRQUICA ESTÁ AQUÍ ***
+                const contentToParse = isParenthesized ? token.slice(1, -1) : token;
+                const basePosition = isParenthesized ? position + 1 : position;
+                
+                const subTokens = contentToParse.split(/([-–|])/);
+                let currentSubPosition = basePosition;
+                let foundChordsInGroup = false;
+
+                for (const subToken of subTokens) {
+                    if (subToken.trim() === '' || subToken.match(/[-–|]/)) {
+                        currentSubPosition += subToken.length;
+                        continue;
+                    }
+
+                    const parsedChord = parseChordString(subToken);
+                    if (parsedChord) {
+                        foundChordsInGroup = true;
+                        currentLineChords.push({ chord: parsedChord, position: currentSubPosition });
+                        allChords.push(parsedChord);
+                    }
+                    currentSubPosition += subToken.length;
+                }
+                
+                // Si el grupo entre paréntesis no contenía acordes válidos, trátalo como una sola anotación.
+                if (isParenthesized && !foundChordsInGroup) {
+                    const annotationItem = { raw: token, rootNote: '', type: '' };
+                    currentLineChords.push({ chord: annotationItem, position: position, isAnnotation: true });
+                } else if (!isParenthesized && !foundChordsInGroup) {
+                    const annotationItem = { raw: token, rootNote: '', type: '' };
+                    currentLineChords.push({ chord: annotationItem, position: position, isAnnotation: true });
                 }
             }
-            const nextLine = (i + 1 < rawLines.length) ? rawLines[i + 1] : null;
-            if (nextLine !== null && !isChordLine(nextLine)) {
-                processedLines.push({ lyrics: nextLine, chords: songChords, isInstrumental: false });
-                i += 2;
+
+            const nextLineIndex = i + 1;
+            const nextRawLine = (nextLineIndex < rawLines.length) ? rawLines[nextLineIndex] : null;
+
+            if (nextRawLine !== null && !isChordLine(nextRawLine)) {
+                currentLineLyrics = nextRawLine;
+                i += 2; 
             } else {
-                processedLines.push({ lyrics: '', chords: songChords, isInstrumental: true });
+                isInstrumental = true;
                 i += 1;
             }
         } else {
-            processedLines.push({ lyrics: originalLine, chords: [], isInstrumental: false });
+            currentLineLyrics = currentRawLine;
             i += 1;
         }
+
+        processedLines.push({ lyrics: currentLineLyrics, chords: currentLineChords, isInstrumental: isInstrumental });
     }
-    
+
     return { lines: processedLines, allChords };
 }
 

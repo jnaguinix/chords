@@ -71,8 +71,12 @@ export const CHORD_TYPE_MAP: { [key: string]: string } = {
     'm9': '9na Menor (m9)',
     'm7': '7ma Menor (m7)',
     'm6': '6ta Menor (m6)',
+    // *** INICIO DE LA MODIFICACIÓN ***
+    'º7': '7ma Disminuida (dim7)',   // Nuevo alias para dim7
+    '°7': '7ma Disminuida (dim7)',   // Nuevo alias para dim7 (con símbolo de grado)
     'dim7': '7ma Disminuida (dim7)',
     'o7': '7ma Disminuida (dim7)',
+    // *** FIN DE LA MODIFICACIÓN ***
     '6/9': '6ta/9na',
     '9sus4': '9na Sus4 (9sus4)',
     '7sus4': '7ma Sus4 (7sus4)',
@@ -83,7 +87,11 @@ export const CHORD_TYPE_MAP: { [key: string]: string } = {
     'sus4': 'Sus4',
     'sus2': 'Sus2',
     'sus': 'Sus4', // Alias para sus4
+    // *** INICIO DE LA MODIFICACIÓN ***
     'dim': 'Disminuido',
+    'º': 'Disminuido', // Nuevo alias para Disminuido
+    '°': 'Disminuido', // Nuevo alias para Disminuido (con símbolo de grado)
+    // *** FIN DE LA MODIFICACIÓN ***
     'aug': 'Aumentado',
     '+': 'Aumentado',
     '13': '13na (13)',
@@ -99,11 +107,14 @@ export const CHORD_TYPE_MAP: { [key: string]: string } = {
 };
 
 // --- MAPA INVERSO CON NUEVOS ACORDES ---
+// **Nota:** El mapa inverso solo necesita un sufijo canónico por tipo de acorde.
+// 'dim7' ya representa al tipo '7ma Disminuida (dim7)', por lo que aquí no son necesarios cambios,
+// pero es bueno añadir el del disminuido simple.
 export const CHORD_TYPE_TO_SUFFIX: { [key: string]: string } = {
     'Mayor': '',
     'Menor': 'm',
     'Power Chord (5)': '5',
-    'Disminuido': 'dim',
+    'Disminuido': 'dim', // 'dim' es el sufijo preferido, pero 'º' o '°' también funcionarían
     'Aumentado': '+',
     '7ma Mayor (Maj7)': 'maj7',
     '7ma Menor (m7)': 'm7',
@@ -117,7 +128,7 @@ export const CHORD_TYPE_TO_SUFFIX: { [key: string]: string } = {
     '9na Sus4 (9sus4)': '9sus4',
     'Add4': 'add4',
     '7ma Semidisminuida (m7b5)': 'm7b5',
-    '7ma Disminuida (dim7)': 'dim7',
+    '7ma Disminuida (dim7)': 'dim7', // 'dim7' es el sufijo preferido para la salida.
     'Menor con 7ma Mayor': 'm(maj7)',
     '6ta/9na': '6/9',
     'Add9': 'add9',

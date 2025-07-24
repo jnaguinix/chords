@@ -1,4 +1,4 @@
-// composer.ts (Versión Final y Corregida con Piano Display)
+// composer.ts (Versión Final y Corregida con Piano Display - Limpia de handleClearSequence)
 
 import type { ProcessedSong, SequenceItem, SongChord, ShowInspectorFn } from '../types';
 import { formatChordName, getChordNotes, calculateOptimalPianoRange } from '../core/chord-utils';
@@ -17,6 +17,7 @@ interface ComposerDOMElements {
     transpositionDisplay: HTMLElement;
     exportBtn: HTMLButtonElement; // Nuevo: Botón para exportar
     importBtn: HTMLButtonElement; // Nuevo: Botón para importar
+    // SE HA ELIMINADO: clearSongBtn: HTMLButtonElement;
 }
 
 export class Composer {
@@ -65,6 +66,7 @@ export class Composer {
         this.elements.transposeDownBtn.addEventListener('click', () => this.transposeSong(-1));
         this.elements.exportBtn.addEventListener('click', this.handleExportSong); // Nuevo: Exportar canción
         this.elements.importBtn.addEventListener('click', this.handleImportSong); // Nuevo: Importar canción
+        // SE HA ELIMINADO: this.elements.clearSongBtn.addEventListener('click', this.handleClearSequence);
     }
 
     private handleExportSong = (): void => {
@@ -98,9 +100,9 @@ export class Composer {
                     // tiene la estructura de ProcessedSong
                     this.setSong(importedSong);
                     alert('Canción importada exitosamente.');
-                } catch (error) {
-                    alert('Error al importar la canción: ' + error.message);
-                    console.error('Error importing song:', error);
+                } catch (error: any) {
+                    console.error("Error al importar el archivo de canción:", error); // Mensaje corregido
+                    alert("Error al importar la canción: " + error.message); // Mensaje corregido
                 }
             }
         };
@@ -134,6 +136,8 @@ export class Composer {
         this.elements.transpositionDisplay.textContent = text;
     };
 
+    // SE HA ELIMINADO LA FUNCIÓN: handleClearSequence
+    /*
     private handleClearSequence = (): void => {
         this.currentSong = { lines: [], allChords: [] };
         this.nextChordId = 1;
@@ -142,6 +146,7 @@ export class Composer {
         this.updateTranspositionDisplay(); // Actualizar display de transposición
         this.render();
     };
+    */
 
     private getCharWidth(element: HTMLElement): number {
         const span = document.createElement('span');
@@ -292,7 +297,7 @@ export class Composer {
                 this.render();
             },
             onDelete: this.handleDeleteChord
-        }, this.currentTransposition);
+        });
     }
     
     private render(): void {

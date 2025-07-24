@@ -5,8 +5,6 @@ import { Extractor } from './modes/extractor';
 import { AudioEngine } from './core/audio';
 import { createPiano } from './core/piano-renderer';
 import { getChordNotes, calculateOptimalPianoRange } from './core/chord-utils';
-// --- CAMBIO AQUÍ ---
-// Se reemplaza la constante eliminada por la nueva. Usamos SELECTOR_NOTES para los menús.
 import { MUSICAL_INTERVALS, SELECTOR_NOTES } from './constants';
 import type { SequenceItem, ProcessedSong, InspectorCallbacks, ShowInspectorFn } from './types';
 
@@ -76,19 +74,18 @@ class PianoApp {
             this.audioEngine
         );
         
-        // --- BLOQUE CORREGIDO ---
         this.composer = new Composer({
                 compositionOutput: document.getElementById('composition-output')!,
                 insertionIndicator: document.getElementById('chord-insertion-indicator')!,
                 composerPianoDisplay: document.getElementById('composer-piano-display')!,
-                composerChordNameDisplay: document.getElementById('composer-chord-name-display')!, // Nuevo elemento
-                // Nuevos elementos para transposición en el compositor
+                composerChordNameDisplay: document.getElementById('composer-chord-name-display')!, 
                 transpositionControls: document.getElementById('composer-transposition-controls')!,
                 transposeUpBtn: document.getElementById('composer-transpose-up-btn') as HTMLButtonElement,
                 transposeDownBtn: document.getElementById('composer-transpose-down-btn') as HTMLButtonElement,
                 transpositionDisplay: document.getElementById('composer-transposition-display')!,
-                exportBtn: document.getElementById('export-song-btn') as HTMLButtonElement, // Nuevo: Botón de exportar
-                importBtn: document.getElementById('import-song-btn') as HTMLButtonElement, // Nuevo: Botón de importar
+                exportBtn: document.getElementById('export-song-btn') as HTMLButtonElement,
+                importBtn: document.getElementById('import-song-btn') as HTMLButtonElement,
+                // SE HA ELIMINADO: clearSongBtn: document.getElementById('clear-song-btn') as HTMLButtonElement,
             },
             this.showChordInspector,
             this.audioEngine
@@ -210,7 +207,6 @@ class PianoApp {
     private populateSelects(item: SequenceItem): void {
         // --- POBLAR NOTA RAÍZ ---
         this.chordInspectorRootNoteSelect.innerHTML = '';
-        // --- CAMBIO AQUÍ ---
         SELECTOR_NOTES.forEach(note => {
             const option = document.createElement('option');
             option.value = note;
@@ -236,7 +232,6 @@ class PianoApp {
         noBassOption.textContent = 'Sin Bajo';
         this.chordInspectorBassNoteSelect.appendChild(noBassOption);
 
-        // --- CAMBIO AQUÍ ---
         SELECTOR_NOTES.forEach(note => {
             const option = document.createElement('option');
             option.value = note;
