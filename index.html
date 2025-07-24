@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -58,6 +59,9 @@
             </div>
         </main>
 
+        <!-- ============================================= -->
+        <!-- ===== SECCIÓN DEL EXTRACTOR MODIFICADA ====== -->
+        <!-- ============================================= -->
         <main id="extractor-mode" class="mode-content">
              <p class="description" style="max-width: 650px;">Pega la letra y los acordes de una canción. Haz clic en un acorde para ver su diagrama y escucharlo.</p>
             <textarea id="song-input" placeholder="Pega o escribe tu canción aquí....
@@ -68,16 +72,21 @@ Consejos para un análisis perfecto:
 -Para bajos, une el acorde y el bajo: Am/G (correcto) vs Am / G (incorrecto).
 -Para secuencias, usa guiones: G-C-D."></textarea>
             
-            <div id="transposition-controls" class="controls" style="display: none; margin-top: 20px; justify-content: center;">
-                <button id="transpose-down-btn" class="button-secondary">- Semitono</button>
-                <span id="transposition-display">Tonalidad Original</span>
-                <button id="transpose-up-btn" class="button-secondary">+ Semitono</button>
-            </div>
-            
-            <div class="controls">
+            <!-- 1. Usa un único contenedor para TODOS los controles -->
+            <div class="extractor-controls-container">
+                
+                <!-- 2. Coloca el grupo de transposición directamente aquí -->
+                <div id="transposition-controls" class="transposition-controls" style="display: none;">
+                    <button id="transpose-down-btn" class="button-secondary">- Semitono</button>
+                    <span id="transposition-display">Tonalidad Original</span>
+                    <button id="transpose-up-btn" class="button-secondary">+ Semitono</button>
+                </div>
+                
+                <!-- 3. Coloca los otros botones directamente aquí (sin un div extra) -->
                 <button id="process-song-btn" class="button-primary">Analizar Canción</button>
                 <button id="clear-extractor-btn" class="button-secondary">Limpiar</button>
                 <button id="add-to-composer-btn" class="button-secondary" disabled>Añadir acordes al Compositor</button>
+
             </div>
             
             <div id="extractor-loader" class="loader-container" style="display: none;">
@@ -88,6 +97,9 @@ Consejos para un análisis perfecto:
                  <!-- La canción procesada se mostrará aquí -->
             </div>
         </main>
+        <!-- ============================================= -->
+        <!-- ========== FIN DE LA MODIFICACIÓN =========== -->
+        <!-- ============================================= -->
 
         <!-- SECCIÓN DEL COMPOSITOR ACTUALIZADA -->
         <main id="composer-mode" class="mode-content">

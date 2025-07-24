@@ -5,7 +5,7 @@ import { Extractor } from './modes/extractor';
 import { AudioEngine } from './core/audio';
 import { createPiano } from './core/piano-renderer';
 import { getChordNotes, calculateOptimalPianoRange } from './core/chord-utils';
-import { MUSICAL_INTERVALS, SELECTOR_NOTES } from './constants';
+import { MUSICAL_INTERVALS, INDEX_TO_SHARP_NAME, INDEX_TO_FLAT_NAME, NOTE_TO_INDEX } from './constants';
 import type { SequenceItem, ProcessedSong, InspectorCallbacks, ShowInspectorFn } from './types';
 
 class PianoApp {
@@ -85,9 +85,8 @@ class PianoApp {
                 transpositionDisplay: document.getElementById('composer-transposition-display')!,
                 exportBtn: document.getElementById('export-song-btn') as HTMLButtonElement,
                 importBtn: document.getElementById('import-song-btn') as HTMLButtonElement,
-                // SE HA ELIMINADO: clearSongBtn: document.getElementById('clear-song-btn') as HTMLButtonElement,
             },
-            this.showChordInspector,
+            this.showInspector,
             this.audioEngine
         );
 
@@ -104,7 +103,7 @@ class PianoApp {
                 transpositionDisplay: document.getElementById('transposition-display')!,
             },
             {
-                showInspector: this.showChordInspector,
+                showInspector: this.showInspector,
                 addToComposer: this.addSongToComposer,
             },
             this.audioEngine
@@ -203,19 +202,57 @@ class PianoApp {
         this.composer.setSong(song);
         this.switchMode('composer');
     }
-
+    
+    // --- FUNCIÓN CORREGIDA ---
     private populateSelects(item: SequenceItem): void {
+        
         // --- POBLAR NOTA RAÍZ ---
         this.chordInspectorRootNoteSelect.innerHTML = '';
-        SELECTOR_NOTES.forEach(note => {
+
+        for (let i = 0; i < 12; i++) {
+            const sharpName = INDEX_TO_SHARP_NAME[i];
+            const flatName = INDEX_TO_FLAT_NAME[i];
             const option = document.createElement('option');
-            option.value = note;
-            option.textContent = note;
+
+            if (sharpName === flatName) {
+                // Para notas naturales (C, D, E, etc.)
+                option.value = sharpName;
+                option.textContent = sharpName;
+            } else {
+                // Para teclas negras (C#/Db, D#/Eb, etc.)
+                // El valor será el que corresponda al acorde actual, para que se seleccione correctamente.
+                option.value = (item.rootNote === sharpName) ? sharpName : flatName;
+                // El texto que se muestra es amigable: "C# / Db"
+                option.textContent = `${sharpName} / ${flatName}`;
+
+                // Si la nota actual es la sostenida, hay que añadir una opción extra solo para el bemol, y viceversa.
+                if (item.rootNote === sharpName) {
+                    const extraOption = document.createElement('option');
+                    extraOption.value = flatName;
+                    extraOption.textContent = flatName; // Texto simple para que se pueda seleccionar
+                } else if (item.rootNote === flatName) {
+                    const extraOption = document.createElement('option');
+                    extraOption.value = sharpName;
+                    extraOption.textContent = sharpName;
+                }
+            }
             this.chordInspectorRootNoteSelect.appendChild(option);
-        });
+        }
+        
+        // Si la nota raíz del acorde no está en el menú, la añadimos dinámicamente.
+        // Esto asegura que C# o Db se puedan seleccionar aunque no sean el `value` principal de la opción.
+        let currentNoteExists = Array.from(this.chordInspectorRootNoteSelect.options).some(opt => opt.value === item.rootNote);
+        if (!currentNoteExists) {
+            const missingOption = document.createElement('option');
+            missingOption.value = item.rootNote;
+            missingOption.textContent = item.rootNote;
+            this.chordInspectorRootNoteSelect.appendChild(missingOption);
+        }
+
         this.chordInspectorRootNoteSelect.value = item.rootNote;
 
-        // --- POBLAR TIPO DE ACORDE ---
+
+        // --- POBLAR TIPO DE ACORDE (sin cambios) ---
         this.chordInspectorTypeSelect.innerHTML = '';
         Object.keys(MUSICAL_INTERVALS).forEach(type => {
             const option = document.createElement('option');
@@ -226,21 +263,46 @@ class PianoApp {
         this.chordInspectorTypeSelect.value = item.type;
         
         // --- POBLAR NOTA DE BAJO ---
+        // Se usa la misma lógica que para la nota raíz para que también muestre enarmonías
         this.chordInspectorBassNoteSelect.innerHTML = '';
         const noBassOption = document.createElement('option');
         noBassOption.value = 'none';
         noBassOption.textContent = 'Sin Bajo';
         this.chordInspectorBassNoteSelect.appendChild(noBassOption);
 
-        SELECTOR_NOTES.forEach(note => {
+        for (let i = 0; i < 12; i++) {
+            const sharpName = INDEX_TO_SHARP_NAME[i];
+            const flatName = INDEX_TO_FLAT_NAME[i];
             const option = document.createElement('option');
-            option.value = note;
-            option.textContent = note;
+
+            if (sharpName === flatName) {
+                option.value = sharpName;
+                option.textContent = sharpName;
+            } else {
+                option.value = sharpName; // Usamos sostenido como valor por defecto
+                option.textContent = `${sharpName} / ${flatName}`;
+            }
             this.chordInspectorBassNoteSelect.appendChild(option);
-        });
+        }
+        
+        // Asegurarse de que el bajo actual (si es un bemol) se pueda seleccionar
+        if (item.bassNote) {
+            let bassNoteExists = Array.from(this.chordInspectorBassNoteSelect.options).some(opt => opt.value === item.bassNote);
+             if (!bassNoteExists) {
+                const flatOptionValue = INDEX_TO_FLAT_NAME[NOTE_TO_INDEX[item.bassNote]];
+                 if (flatOptionValue && flatOptionValue !== item.bassNote) {
+                     // No es necesario añadirlo si el `value` ya es el sharp
+                 } else if (flatOptionValue){
+                    const missingOption = document.createElement('option');
+                    missingOption.value = item.bassNote;
+                    missingOption.textContent = item.bassNote;
+                    this.chordInspectorBassNoteSelect.appendChild(missingOption);
+                 }
+            }
+        }
         this.chordInspectorBassNoteSelect.value = item.bassNote || 'none';
 
-        // --- POBLAR INVERSIÓN ---
+        // --- POBLAR INVERSIÓN (sin cambios) ---
         this.populateInversionSelect(item);
     }
 
@@ -261,7 +323,7 @@ class PianoApp {
         }
     }
 
-    public showChordInspector: ShowInspectorFn = (item, callbacks): void => {
+    public showInspector: ShowInspectorFn = (item, callbacks): void => {
         if (!item) return;
     
         const isNewChord = item.id === undefined;

@@ -1,33 +1,37 @@
-// composer.ts (Versión Final y Corregida con Piano Display - Limpia de handleClearSequence)
+// composer.ts (Refactorizado para usar los nuevos managers y restaurar el display del piano)
 
 import type { ProcessedSong, SequenceItem, SongChord, ShowInspectorFn } from '../types';
+// --- CAMBIO: Se reincorporan las importaciones necesarias para el piano ---
 import { formatChordName, getChordNotes, calculateOptimalPianoRange } from '../core/chord-utils';
-import { createSongSheet, createPiano } from '../core/piano-renderer';
+import { createPiano } from '../core/piano-renderer';
 import type { AudioEngine } from '../core/audio';
+import { TranspositionManager } from '../core/transposition-manager';
+import { SheetManager } from '../core/sheet-manager';
 
-// La interfaz ahora incluye el nuevo piano display
 interface ComposerDOMElements {
     compositionOutput: HTMLElement;
     insertionIndicator: HTMLElement; 
-    composerPianoDisplay: HTMLElement; // <-- Piano persistente
-    composerChordNameDisplay: HTMLElement; // Nuevo: Para mostrar el nombre del acorde
+    composerPianoDisplay: HTMLElement;
+    composerChordNameDisplay: HTMLElement;
     transpositionControls: HTMLElement;
     transposeUpBtn: HTMLButtonElement;
     transposeDownBtn: HTMLButtonElement;
     transpositionDisplay: HTMLElement;
-    exportBtn: HTMLButtonElement; // Nuevo: Botón para exportar
-    importBtn: HTMLButtonElement; // Nuevo: Botón para importar
-    // SE HA ELIMINADO: clearSongBtn: HTMLButtonElement;
+    exportBtn: HTMLButtonElement;
+    importBtn: HTMLButtonElement;
 }
 
 export class Composer {
     private elements: ComposerDOMElements;
     private showInspector: ShowInspectorFn;
     private audioEngine: AudioEngine;
+    
     private currentSong: ProcessedSong | null = null;
     private nextChordId = 1;
     private currentInsertingChordId: number | null = null; 
-    private currentTransposition = 0; // 0 = Tonalidad Original
+
+    private transpositionManager: TranspositionManager;
+    private sheetManager: SheetManager;
 
     constructor(
         elements: ComposerDOMElements, 
@@ -37,37 +41,66 @@ export class Composer {
         this.elements = elements;
         this.showInspector = showInspector;
         this.audioEngine = audioEngine;
-        this.updateTranspositionDisplay();
+        
+        this.transpositionManager = new TranspositionManager(
+            this.elements.transpositionDisplay,
+            () => this.sheetManager.render()
+        );
+
+        this.sheetManager = new SheetManager({
+            container: this.elements.compositionOutput,
+            audioEngine: this.audioEngine,
+            showInspector: this.showInspector,
+            getSong: () => this.currentSong,
+            getTransposition: () => this.transpositionManager.getOffset(),
+            updateChord: this.updateChordInSong,
+            deleteChord: this.handleDeleteChord,
+            // --- CAMBIO CLAVE AQUÍ ---
+            // Le decimos al SheetManager qué hacer cuando se hace clic en un acorde.
+            onChordClick: this.updateDisplayPiano,
+        });
     }
 
     public init(): void {
         this.addEventListeners();
-        this.render();
+        this.sheetManager.render();
     }
 
     public setSong(song: ProcessedSong): void {
         this.currentSong = song;
         const maxId = Math.max(0, ...song.allChords.map(c => c.id || 0));
         this.nextChordId = maxId + 1;
-        this.currentTransposition = 0; // Resetear transposición al cargar una nueva canción
-        // Actualizar la propiedad 'raw' de cada acorde para reflejar la transposición actual
-        this.currentSong.allChords.forEach(chord => {
-            chord.raw = formatChordName(chord, { style: 'short' }, this.currentTransposition);
-        });
-        this.updateTranspositionDisplay(); // Actualizar display de transposición
-        this.render();
+        this.transpositionManager.reset(); 
+        this.sheetManager.render();
     }
     
     private addEventListeners(): void {
         this.elements.compositionOutput.addEventListener('mousemove', this.handleMouseMove);
         this.elements.compositionOutput.addEventListener('mouseleave', this.handleMouseLeave);
         this.elements.compositionOutput.addEventListener('click', this.handleInsertionClick);
-        this.elements.transposeUpBtn.addEventListener('click', () => this.transposeSong(1));
-        this.elements.transposeDownBtn.addEventListener('click', () => this.transposeSong(-1));
-        this.elements.exportBtn.addEventListener('click', this.handleExportSong); // Nuevo: Exportar canción
-        this.elements.importBtn.addEventListener('click', this.handleImportSong); // Nuevo: Importar canción
-        // SE HA ELIMINADO: this.elements.clearSongBtn.addEventListener('click', this.handleClearSequence);
+        this.elements.transposeUpBtn.addEventListener('click', () => this.transpositionManager.up());
+        this.elements.transposeDownBtn.addEventListener('click', () => this.transpositionManager.down());
+        this.elements.exportBtn.addEventListener('click', this.handleExportSong);
+        this.elements.importBtn.addEventListener('click', this.handleImportSong);
     }
+
+    // --- FUNCIÓN RESTAURADA ---
+    // Esta función se encarga de actualizar el piano y el nombre del acorde en la parte superior.
+    private updateDisplayPiano = (item: SequenceItem): void => {
+        const currentTransposition = this.transpositionManager.getOffset();
+        const { notesToPress, bassNoteIndex, allNotesForRange } = getChordNotes(item, currentTransposition);
+        
+        this.elements.composerChordNameDisplay.textContent = formatChordName(item, { style: 'long' }, currentTransposition);
+
+        if (allNotesForRange.length > 0) {
+            const { startNote, endNote } = calculateOptimalPianoRange(allNotesForRange, 15, 2);
+            createPiano(this.elements.composerPianoDisplay, startNote, endNote, notesToPress, true, bassNoteIndex);
+        } else {
+            this.elements.composerPianoDisplay.innerHTML = '';
+        }
+    }
+
+    // ... (el resto del archivo permanece igual)
 
     private handleExportSong = (): void => {
         if (!this.currentSong) {
@@ -79,7 +112,7 @@ export class Composer {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'my_song.chordsong'; // Nombre de archivo por defecto
+        a.download = 'my_song.chordsong';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -89,64 +122,23 @@ export class Composer {
     private handleImportSong = (): void => {
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = '.chordsong,.json'; // Aceptar extensiones .chordsong y .json
+        input.accept = '.chordsong,.json';
         input.onchange = async (event) => {
             const file = (event.target as HTMLInputElement).files?.[0];
             if (file) {
                 try {
                     const content = await file.text();
                     const importedSong = JSON.parse(content);
-                    // Aquí podrías añadir validación adicional para asegurar que importedSong
-                    // tiene la estructura de ProcessedSong
                     this.setSong(importedSong);
                     alert('Canción importada exitosamente.');
                 } catch (error: any) {
-                    console.error("Error al importar el archivo de canción:", error); // Mensaje corregido
-                    alert("Error al importar la canción: " + error.message); // Mensaje corregido
+                    console.error("Error al importar el archivo de canción:", error);
+                    alert("Error al importar la canción: " + error.message);
                 }
             }
         };
         input.click();
     };
-
-    private transposeSong = (semitones: number): void => {
-        if (!this.currentSong) return;
-
-        this.currentTransposition += semitones;
-        // Asegurarse de que la transposición se mantenga dentro de un rango razonable, por ejemplo, -12 a +12
-        if (this.currentTransposition > 12) this.currentTransposition = 12;
-        if (this.currentTransposition < -12) this.currentTransposition = -12;
-
-        // Actualizar la propiedad 'raw' de cada acorde para reflejar la transposición
-        this.currentSong.allChords.forEach(chord => {
-            chord.raw = formatChordName(chord, { style: 'short' }, this.currentTransposition);
-        });
-
-        this.updateTranspositionDisplay();
-        this.render();
-    };
-
-    private updateTranspositionDisplay = (): void => {
-        let text = 'Original';
-        if (this.currentTransposition > 0) {
-            text = `+${this.currentTransposition}`;
-        } else if (this.currentTransposition < 0) {
-            text = `${this.currentTransposition}`;
-        }
-        this.elements.transpositionDisplay.textContent = text;
-    };
-
-    // SE HA ELIMINADO LA FUNCIÓN: handleClearSequence
-    /*
-    private handleClearSequence = (): void => {
-        this.currentSong = { lines: [], allChords: [] };
-        this.nextChordId = 1;
-        this.currentTransposition = 0; // Resetear transposición al limpiar
-        this.elements.composerPianoDisplay.innerHTML = ''; // Limpia el piano
-        this.updateTranspositionDisplay(); // Actualizar display de transposición
-        this.render();
-    };
-    */
 
     private getCharWidth(element: HTMLElement): number {
         const span = document.createElement('span');
@@ -186,7 +178,7 @@ export class Composer {
         if (!this.currentSong) {
             this.currentSong = { lines: [{ lyrics: '', chords: [], isInstrumental: false }], allChords: [] };
             this.nextChordId = 1;
-            this.renderSongSheet();
+            this.sheetManager.render();
         }
         
         const songLineEl = lyricsEl.closest<HTMLElement>('.song-line')!;
@@ -213,7 +205,7 @@ export class Composer {
                 } else {
                     this.updateChordInSong(chordBeingBuilt); 
                 }
-                this.render();
+                this.sheetManager.render();
             },
             onInsert: (chordToInsert) => {
                 if (this.currentInsertingChordId === null) {
@@ -221,7 +213,7 @@ export class Composer {
                     chordToInsert.id = this.currentInsertingChordId;
                     this.addChordToSongData(chordToInsert, capturedInsertionTarget);
                 }
-                this.render(); 
+                this.sheetManager.render(); 
                 this.handleMouseLeave(); 
                 this.currentInsertingChordId = null; 
             },
@@ -232,10 +224,10 @@ export class Composer {
         });
     };
     
-    private addChordToSongData(item: SequenceItem, target: { lineIndex: number; charIndex: number }) {
+    private addChordToSongData = (item: SequenceItem, target: { lineIndex: number; charIndex: number }) => {
         if (!this.currentSong || item.id === undefined || !target) return;
         
-        const newItem = { ...item, raw: formatChordName(item, { style: 'short' }, this.currentTransposition) };
+        const newItem = { ...item, raw: formatChordName(item, { style: 'short' }, this.transpositionManager.getOffset()) };
         const targetLine = this.currentSong.lines[target.lineIndex];
         if (targetLine) {
             const safePosition = Math.min(target.charIndex, targetLine.lyrics.length);
@@ -247,17 +239,13 @@ export class Composer {
         }
     }
 
-    private updateChordInSong(updatedItem: SequenceItem) {
+    private updateChordInSong = (updatedItem: SequenceItem) => {
         if (!this.currentSong || updatedItem.id === undefined) return;
 
-        const chordToUpdate = this.currentSong.allChords.find(c => c.id === updatedItem.id);
-        if (chordToUpdate) {
-            Object.assign(chordToUpdate, updatedItem);
-            chordToUpdate.raw = formatChordName(chordToUpdate, { style: 'short' }, this.currentTransposition);
-            for (const line of this.currentSong.lines) {
-                const songChordToUpdate = line.chords.find(sc => sc.chord.id === updatedItem.id);
-                if (songChordToUpdate) { songChordToUpdate.chord = chordToUpdate; break; }
-            }
+        const chordIndex = this.currentSong.allChords.findIndex(c => c.id === updatedItem.id);
+        if (chordIndex !== -1) {
+            this.currentSong.allChords[chordIndex] = updatedItem;
+            this.sheetManager.render();
         }
     }
 
@@ -267,55 +255,6 @@ export class Composer {
         this.currentSong.lines.forEach(line => {
             line.chords = line.chords.filter(sc => sc.chord.id !== itemToDelete.id);
         });
-        this.render();
-    }
-
-    private updateDisplayPiano(item: SequenceItem): void {
-        const { notesToPress, bassNoteIndex, allNotesForRange } = getChordNotes(item, this.currentTransposition);
-        
-        // Actualizar el nombre del acorde
-        this.elements.composerChordNameDisplay.textContent = formatChordName(item, { style: 'long' }, this.currentTransposition);
-
-        if (allNotesForRange.length > 0) {
-            const { startNote, endNote } = calculateOptimalPianoRange(allNotesForRange, 15, 2);
-            createPiano(this.elements.composerPianoDisplay, startNote, endNote, notesToPress, true, bassNoteIndex);
-        } else {
-            this.elements.composerPianoDisplay.innerHTML = '';
-        }
-    }
-
-    private onShortClick = (item: SequenceItem): void => {
-        this.audioEngine.playChord(item, this.currentTransposition);
-        this.updateDisplayPiano(item);
-    }
-
-    private onLongClick = (item: SequenceItem): void => {
-        this.updateDisplayPiano(item);
-        this.showInspector(item, {
-            onUpdate: (updatedItem) => {
-                this.updateChordInSong(updatedItem);
-                this.render();
-            },
-            onDelete: this.handleDeleteChord
-        });
-    }
-    
-    private render(): void {
-        this.renderSongSheet();
-    }
-
-    private renderSongSheet(): void {
-        this.elements.compositionOutput.innerHTML = '';
-        if (!this.currentSong || this.currentSong.lines.length === 0) {
-            this.elements.compositionOutput.className = 'song-sheet-container';
-            this.elements.compositionOutput.innerHTML = `<div class="song-line" data-line-index="0"><div class="lyrics-layer" style="min-height: 2em; cursor: text;">Importa una canción o agregala desde el extractor...</div></div>`;
-            return;
-        }
-        
-        createSongSheet(this.elements.compositionOutput, this.currentSong.lines, {
-            onShortClick: this.onShortClick,
-            onLongClick: this.onLongClick,
-            transposition: this.currentTransposition, // Pasar la transposición actual
-        });
+        this.sheetManager.render();
     }
 }

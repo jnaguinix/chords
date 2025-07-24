@@ -1,7 +1,10 @@
-import { applyTransposition, parseSongText, formatChordName } from '../core/chord-utils';
-import { createSongSheet } from '../core/piano-renderer'; 
+// extractor.ts (Refactorizado para usar los nuevos managers)
+
+import { parseSongText, transposeNote } from '../core/chord-utils';
 import type { ProcessedSong, SequenceItem, ShowInspectorFn } from '../types';
 import type { AudioEngine } from '../core/audio';
+import { TranspositionManager } from '../core/transposition-manager';
+import { SheetManager } from '../core/sheet-manager';
 
 interface ExtractorElements {
     songInput: HTMLTextAreaElement;
@@ -25,9 +28,12 @@ export class Extractor {
     private elements: ExtractorElements;
     private callbacks: ExtractorCallbacks;
     private audioEngine: AudioEngine;
+    
     private originalSong: ProcessedSong | null = null;
-    private displayedSong: ProcessedSong | null = null;
-    private transpositionOffset = 0;
+    
+    // Instancias de los nuevos managers
+    private transpositionManager: TranspositionManager;
+    private sheetManager: SheetManager;
 
     constructor(
         elements: ExtractorElements, 
@@ -37,14 +43,53 @@ export class Extractor {
         this.elements = elements;
         this.callbacks = callbacks;
         this.audioEngine = audioEngine;
+
+        // Inicializa el TranspositionManager
+        this.transpositionManager = new TranspositionManager(
+            this.elements.transpositionDisplay,
+            () => this.sheetManager.render() // Callback para redibujar al transportar
+        );
+
+        // Inicializa el SheetManager
+        this.sheetManager = new SheetManager({
+            container: this.elements.songOutput,
+            audioEngine: this.audioEngine,
+            showInspector: this.callbacks.showInspector,
+            getSong: () => this.originalSong, // El extractor siempre trabaja sobre la canción original
+            getTransposition: () => this.transpositionManager.getOffset(),
+            updateChord: (updatedItem) => {
+                // El extractor actualiza el acorde en la canción original
+                if (!this.originalSong || updatedItem.id === undefined) return;
+                const index = this.originalSong.allChords.findIndex(c => c.id === updatedItem.id);
+                if (index > -1) {
+                    this.originalSong.allChords[index] = updatedItem;
+                    this.sheetManager.render(); // Vuelve a renderizar para mostrar el cambio
+                }
+            },
+            deleteChord: (itemToDelete) => {
+                // El extractor también necesita poder borrar acordes
+                if (!this.originalSong || itemToDelete.id === undefined) return;
+                this.originalSong.allChords = this.originalSong.allChords.filter(c => c.id !== itemToDelete.id);
+                this.originalSong.lines.forEach(line => {
+                    line.chords = line.chords.filter(sc => sc.chord.id !== itemToDelete.id);
+                });
+                this.sheetManager.render();
+            }
+        });
     }
 
     public init(): void {
+        this.elements.processSongBtn.textContent = 'Analizar';
+        this.elements.addToComposerBtn.textContent = 'Añadir al Compositor';
+        this.elements.transposeUpBtn.textContent = '+';
+        this.elements.transposeDownBtn.textContent = '-';
+
         this.elements.processSongBtn.addEventListener('click', this.handleProcessSong);
         this.elements.addToComposerBtn.addEventListener('click', this.handleAddToComposer);
         this.elements.clearExtractorBtn.addEventListener('click', this.handleClearExtractor);
-        this.elements.transposeUpBtn.addEventListener('click', () => this.handleTranspose(1));
-        this.elements.transposeDownBtn.addEventListener('click', () => this.handleTranspose(-1));
+        // Los botones ahora llaman a los métodos del manager
+        this.elements.transposeUpBtn.addEventListener('click', () => this.transpositionManager.up());
+        this.elements.transposeDownBtn.addEventListener('click', () => this.transpositionManager.down());
     }
 
     private handleProcessSong = (): void => {
@@ -66,8 +111,11 @@ export class Extractor {
                     });
                 }
                 
-                this.transpositionOffset = 0;
-                this.updateAndRenderSong();
+                this.transpositionManager.reset(); 
+                
+                // --- CAMBIO CLAVE AQUÍ ---
+                // Le decimos explícitamente al SheetManager que se redibuje con la nueva canción.
+                this.sheetManager.render();
 
                 if (this.originalSong && this.originalSong.allChords.length > 0) {
                     this.elements.addToComposerBtn.disabled = false;
@@ -84,78 +132,31 @@ export class Extractor {
 
     private handleClearExtractor = (): void => {
         this.elements.songInput.value = '';
-        this.elements.songOutput.innerHTML = '';
+        this.originalSong = null;
         this.elements.transpositionControls.style.display = 'none';
         this.elements.addToComposerBtn.disabled = true;
-        this.originalSong = null;
-        this.displayedSong = null;
-        this.transpositionOffset = 0;
+        this.transpositionManager.reset();
+        this.sheetManager.render(); // Renderiza el estado vacío
     };
 
     private handleAddToComposer = (): void => {
-        if (this.displayedSong) {
-            this.callbacks.addToComposer(JSON.parse(JSON.stringify(this.displayedSong)));
-        }
-    }
+        // Al añadir al compositor, creamos una copia limpia con la transposición actual "quemada" en los datos.
+        if (this.originalSong) {
+            const songForComposer = JSON.parse(JSON.stringify(this.originalSong));
+            const currentOffset = this.transpositionManager.getOffset();
 
-    private handleTranspose = (semitones: number): void => {
-        if (!this.originalSong) return;
-        this.transpositionOffset += semitones;
-        this.updateAndRenderSong();
-    }
-
-    private onShortClick = (item: SequenceItem): void => {
-        this.audioEngine.playChord(item);
-    }
-
-    private onLongClick = (item: SequenceItem): void => {
-        this.callbacks.showInspector(item, {});
-    }
-
-    private updateAndRenderSong(): void {
-        if (!this.originalSong) return;
-        
-        const songToTranspose = JSON.parse(JSON.stringify(this.originalSong));
-        this.displayedSong = applyTransposition(songToTranspose, this.transpositionOffset);
-        
-        this.elements.songOutput.innerHTML = '';
-        if (this.displayedSong) {
-            // --- FIX: Re-sincronizar el texto visual (raw) y las referencias ---
-            
-            // 1. Actualizamos el texto 'raw' de cada acorde usando los datos ya transpuestos.
-            this.displayedSong.allChords.forEach(chord => {
-                if (chord.rootNote && chord.type) {
-                    chord.raw = formatChordName(chord, { style: 'short' });
-                }
-            });
-
-            // 2. Re-sincronizamos las referencias para que las 'lines' usen los acordes actualizados.
-            const transposedChordsMap = new Map(this.displayedSong.allChords.map(c => [c.id, c]));
-            this.displayedSong.lines.forEach(line => {
-                line.chords.forEach(songChord => {
-                    if (songChord.chord && songChord.chord.id !== undefined) {
-                        songChord.chord = transposedChordsMap.get(songChord.chord.id)!;
+            // Si hay una transposición, la aplicamos a la copia antes de enviarla.
+            if (currentOffset !== 0) {
+                songForComposer.allChords.forEach((chord: SequenceItem) => {
+                    if (chord.rootNote) {
+                        chord.rootNote = transposeNote(chord.rootNote, currentOffset);
+                    }
+                    if (chord.bassNote) {
+                        chord.bassNote = transposeNote(chord.bassNote, currentOffset);
                     }
                 });
-            });
-            // --- FIN DEL FIX ---
-
-            createSongSheet(this.elements.songOutput, this.displayedSong.lines, {
-                onShortClick: (item: SequenceItem) => this.onShortClick(item),
-                onLongClick: (item: SequenceItem) => this.onLongClick(item),
-                transposition: this.transpositionOffset,
-            });
-        }
-        
-        this.updateTranspositionDisplay();
-    }
-
-    private updateTranspositionDisplay(): void {
-        if (this.transpositionOffset === 0) {
-            this.elements.transpositionDisplay.textContent = 'Tonalidad Original';
-        } else {
-            const sign = this.transpositionOffset > 0 ? '+' : '';
-            this.elements.transpositionDisplay.textContent = `${sign}${this.transpositionOffset} Semitonos`;
+            }
+            this.callbacks.addToComposer(songForComposer);
         }
     }
 }

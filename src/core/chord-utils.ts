@@ -14,7 +14,7 @@ const DEGREE_TO_INTERVAL: { [key: number]: number } = {
     1: 0, 3: 4, 4: 5, 5: 7, 6: 9, 7: 11, 9: 14, 11: 17, 13: 21
 };
 
-function transposeNote(note: string, semitones: number): string {
+export function transposeNote(note: string, semitones: number): string {
     const currentIndex = NOTE_TO_INDEX[note];
     if (currentIndex === undefined) return note;
     const newIndex = (currentIndex + semitones % 12 + 12) % 12;
@@ -388,21 +388,16 @@ export function parseSongText(songText: string): ProcessedSong {
 }
 
 export function applyTransposition(songToTranspose: ProcessedSong, transpositionOffset: number): ProcessedSong {
-    const updateChord = (chord: SequenceItem) => {
-        if (chord.rootNote) {
+    // --- FUNCIÓN CORREGIDA ---
+    // Solo necesitamos iterar sobre la lista principal de acordes.
+    // Los cambios se reflejarán en las líneas automáticamente porque son referencias al mismo objeto.
+    songToTranspose.allChords.forEach(chord => {
+        if (chord.rootNote && chord.type) { // Solo transponer si es un acorde válido
             chord.rootNote = transposeNote(chord.rootNote, transpositionOffset);
-        }
-        if (chord.bassNote) {
-            chord.bassNote = transposeNote(chord.bassNote, transpositionOffset);
-        }
-    };
-    songToTranspose.allChords.forEach(updateChord);
-    songToTranspose.lines.forEach(line => {
-        line.chords.forEach(songChord => {
-            if (!songChord.isAnnotation && songChord.chord.raw !== '%') {
-                updateChord(songChord.chord);
+            if (chord.bassNote) {
+                chord.bassNote = transposeNote(chord.bassNote, transpositionOffset);
             }
-        });
+        }
     });
     return songToTranspose;
 }

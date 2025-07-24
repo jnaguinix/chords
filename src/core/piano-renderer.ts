@@ -143,33 +143,46 @@ export function createSongSheet(
                     }
                 });
 
-                // Manejo del tooltip global
+                // --- LÓGICA DEL TOOLTIP CORREGIDA ---
                 const globalTooltip = document.getElementById('global-tooltip') as HTMLElement;
-                // --- CAMBIO AQUÍ: Se eliminó el parámetro 'e' no utilizado ---
                 visualEl.addEventListener('mouseenter', () => {
+                    globalTooltip.textContent = formatChordName(chord, { style: 'long' }, callbacks.transposition);
+                    
                     const rect = visualEl.getBoundingClientRect();
                     const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
                     const scrollY = window.pageYOffset || document.documentElement.scrollTop;
 
-                    globalTooltip.textContent = formatChordName(chord, { style: 'long' }, callbacks.transposition);
-
-                    // Temporarily make visible to get accurate height
-                    globalTooltip.style.visibility = 'hidden'; // Keep hidden for now
-                    globalTooltip.style.opacity = '0';
-                    globalTooltip.style.left = '0px'; // Position off-screen to measure
-                    globalTooltip.style.top = '0px';
-                    globalTooltip.style.transform = 'none'; // Reset transform for measurement
-                    globalTooltip.style.visibility = 'visible'; // Make visible to measure
+                    // Medir el tooltip fuera de la pantalla para obtener su ancho real
+                    globalTooltip.style.visibility = 'hidden';
+                    globalTooltip.style.left = '-1000px';
+                    globalTooltip.style.top = '-1000px';
+                    globalTooltip.style.transform = 'none';
+                    globalTooltip.style.visibility = 'visible';
+                    const tooltipWidth = globalTooltip.offsetWidth;
                     const tooltipHeight = globalTooltip.offsetHeight;
-                    globalTooltip.style.visibility = 'hidden'; // Hide again
+                    globalTooltip.style.visibility = 'hidden';
 
-                    // Calculate final position
-                    const tooltipLeft = rect.left + scrollX + (rect.width / 2);
-                    const tooltipTop = rect.top + scrollY - tooltipHeight - 5; // 5px margin above visualEl
+                    // Calcular posición inicial (idealmente centrada)
+                    let tooltipLeft = rect.left + scrollX + (rect.width / 2) - (tooltipWidth / 2);
+                    const tooltipTop = rect.top + scrollY - tooltipHeight - 5; // 5px de margen
 
+                    // --- COMPROBACIÓN DE BORDES (Edge Detection) ---
+                    const viewportWidth = window.innerWidth;
+                    const rightEdge = tooltipLeft + tooltipWidth;
+
+                    // Si se sale por la derecha, lo alineamos al borde derecho de la pantalla
+                    if (rightEdge > viewportWidth - 10) { // 10px de margen de seguridad
+                        tooltipLeft = viewportWidth - tooltipWidth - 10;
+                    }
+                    // Si se sale por la izquierda, lo alineamos al borde izquierdo
+                    if (tooltipLeft < 10) {
+                        tooltipLeft = 10;
+                    }
+                    
+                    // Aplicar posición final
                     globalTooltip.style.left = `${tooltipLeft}px`;
                     globalTooltip.style.top = `${tooltipTop}px`;
-                    globalTooltip.style.transform = 'translateX(-50%)'; // Only horizontal centering
+                    globalTooltip.style.transform = 'none'; // Ya no se necesita el translateX(-50%)
                     globalTooltip.style.opacity = '1';
                     globalTooltip.style.visibility = 'visible';
                 });
