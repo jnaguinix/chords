@@ -897,11 +897,17 @@ select {
 }
         .extractor-controls-container {
             display: flex;
-            flex-wrap: wrap; /* Permite que los elementos se muevan a otra línea si no hay espacio */
-            justify-content: center; /* Centra los botones */
-            align-items: center; /* Alinea verticalmente los botones */
-            gap: 12px; /* Espacio entre los grupos de botones */
+            justify-content: space-between; /* <-- Pone un grupo a la izquierda y otro a la derecha */
+            align-items: center;
+            width: 100%;
             padding: 20px 0;
+        }
+
+        .extractor-actions-left,
+        .extractor-actions-right {
+            display: flex;
+            align-items: center;
+            gap: 12px; /* Espacio entre los botones dentro de cada grupo */
         }
 
         .transposition-controls {

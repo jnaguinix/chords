@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -72,21 +71,22 @@ Consejos para un análisis perfecto:
 -Para bajos, une el acorde y el bajo: Am/G (correcto) vs Am / G (incorrecto).
 -Para secuencias, usa guiones: G-C-D."></textarea>
             
-            <!-- 1. Usa un único contenedor para TODOS los controles -->
             <div class="extractor-controls-container">
-                
-                <!-- 2. Coloca el grupo de transposición directamente aquí -->
-                <div id="transposition-controls" class="transposition-controls" style="display: none;">
-                    <button id="transpose-down-btn" class="button-secondary">- Semitono</button>
-                    <span id="transposition-display">Tonalidad Original</span>
-                    <button id="transpose-up-btn" class="button-secondary">+ Semitono</button>
+                <!-- Grupo de botones de la izquierda -->
+                <div class="extractor-actions-left">
+                    <button id="process-song-btn" class="button-primary">Analizar</button>
+                    <button id="add-to-composer-btn" class="button-secondary" disabled>Añadir al Compositor</button>
+                    <button id="clear-extractor-btn" class="button-secondary">Limpiar</button>
                 </div>
-                
-                <!-- 3. Coloca los otros botones directamente aquí (sin un div extra) -->
-                <button id="process-song-btn" class="button-primary">Analizar Canción</button>
-                <button id="clear-extractor-btn" class="button-secondary">Limpiar</button>
-                <button id="add-to-composer-btn" class="button-secondary" disabled>Añadir acordes al Compositor</button>
 
+                <!-- Grupo de botones de la derecha (transposición) -->
+                <div class="extractor-actions-right">
+                    <div id="transposition-controls" class="transposition-controls" style="display: none;">
+                        <button id="transpose-down-btn" class="button-secondary">-</button>
+                        <span id="transposition-display">Original</span>
+                        <button id="transpose-up-btn" class="button-secondary">+</button>
+                    </div>
+                </div>
             </div>
             
             <div id="extractor-loader" class="loader-container" style="display: none;">
