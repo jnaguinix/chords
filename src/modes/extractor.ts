@@ -140,14 +140,11 @@ export class Extractor {
             });
             // --- FIN DEL FIX ---
 
-            createSongSheet(
-                this.elements.songOutput, 
-                this.displayedSong.lines, 
-                {
-                    onShortClick: this.onShortClick,
-                    onLongClick: this.onLongClick,
-                }
-            );
+            createSongSheet(this.elements.songOutput, this.displayedSong.lines, {
+                onShortClick: (item: SequenceItem) => this.onShortClick(item),
+                onLongClick: (item: SequenceItem) => this.onLongClick(item),
+                transposition: this.transpositionOffset,
+            });
         }
         
         this.updateTranspositionDisplay();

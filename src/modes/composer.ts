@@ -10,6 +10,7 @@ interface ComposerDOMElements {
     compositionOutput: HTMLElement;
     insertionIndicator: HTMLElement; 
     composerPianoDisplay: HTMLElement; // <-- Piano persistente
+    composerChordNameDisplay: HTMLElement; // Nuevo: Para mostrar el nombre del acorde
     transpositionControls: HTMLElement;
     transposeUpBtn: HTMLButtonElement;
     transposeDownBtn: HTMLButtonElement;
@@ -266,6 +267,10 @@ export class Composer {
 
     private updateDisplayPiano(item: SequenceItem): void {
         const { notesToPress, bassNoteIndex, allNotesForRange } = getChordNotes(item, this.currentTransposition);
+        
+        // Actualizar el nombre del acorde
+        this.elements.composerChordNameDisplay.textContent = formatChordName(item, { style: 'long' }, this.currentTransposition);
+
         if (allNotesForRange.length > 0) {
             const { startNote, endNote } = calculateOptimalPianoRange(allNotesForRange, 15, 2);
             createPiano(this.elements.composerPianoDisplay, startNote, endNote, notesToPress, true, bassNoteIndex);
@@ -298,7 +303,7 @@ export class Composer {
         this.elements.compositionOutput.innerHTML = '';
         if (!this.currentSong || this.currentSong.lines.length === 0) {
             this.elements.compositionOutput.className = 'song-sheet-container';
-            this.elements.compositionOutput.innerHTML = `<div class="song-line" data-line-index="0"><div class="lyrics-layer" style="min-height: 2em; cursor: text;">Haz clic aquí para empezar a componer...</div></div>`;
+            this.elements.compositionOutput.innerHTML = `<div class="song-line" data-line-index="0"><div class="lyrics-layer" style="min-height: 2em; cursor: text;">Importa una canción o agregala desde el extractor...</div></div>`;
             return;
         }
         

@@ -81,6 +81,7 @@ class PianoApp {
                 compositionOutput: document.getElementById('composition-output')!,
                 insertionIndicator: document.getElementById('chord-insertion-indicator')!,
                 composerPianoDisplay: document.getElementById('composer-piano-display')!,
+                composerChordNameDisplay: document.getElementById('composer-chord-name-display')!, // Nuevo elemento
                 // Nuevos elementos para transposición en el compositor
                 transpositionControls: document.getElementById('composer-transposition-controls')!,
                 transposeUpBtn: document.getElementById('composer-transpose-up-btn') as HTMLButtonElement,

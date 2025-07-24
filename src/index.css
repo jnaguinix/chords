@@ -15,6 +15,8 @@
     --text-muted-color: #909090; /* Texto muted más oscuro */
     --interactive-blue: #418dcc; /* Azul interactivo ligeramente más brillante */
     --interactive-blue-hover: #9AC0FF; /* Hover del azul interactivo */
+    --neon-blue: #00ff0d; /* Nuevo color azul neón */
+    --neon-blue-glow: 0 0 5px #00ff0d, 0 0 15px #eeff00, 0 0 25px #15ff00; /* Efecto de brillo neón */
 }
 
 *, *::before, *::after {
@@ -219,6 +221,16 @@ select {
     font-family: 'Victor Mono', monospace; /* Forzar Victor Mono */
 }
 
+#composer-chord-name-display {
+    font-size: clamp(1.1rem, 2vw, 1.7rem); /* Tamaño de fuente ajustado para ser más pequeño */
+    font-weight: 700;
+    color: var(--neon-blue);
+    text-shadow: var(--neon-blue-glow);
+    margin: 0;
+    transition: color 0.2s;
+    font-family: 'Victor Mono', monospace;
+}
+
 #piano-container {
     display: flex;
     justify-content: center;
@@ -330,12 +342,19 @@ select {
 }
 
 .composition-header {
-    display: grid;
-    grid-template-columns: 1fr auto;
+    display: flex; /* Cambiado a flexbox para un control más fácil */
+    justify-content: space-between; /* Espacio entre el piano/nombre y los controles */
     align-items: center;
     gap: 2rem;
     margin-bottom: 1.5rem;
     flex-shrink: 0; /* Evita que el encabezado se encoja */
+}
+
+.piano-and-name-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centrar horizontalmente el nombre y el piano */
+    gap: 10px; /* Espacio entre el nombre del acorde y el piano */
 }
 
 .piano-container-small {
