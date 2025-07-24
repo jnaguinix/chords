@@ -175,6 +175,16 @@ select {
 .button-secondary:hover:not(:disabled) { background-color: var(--grey); transform: translateY(-1px); }
 .button-secondary:active:not(:disabled) { transform: translateY(0); }
 
+#chord-inspector-delete-btn {
+    background-color: var(--accent-red);
+    border-color: var(--accent-red);
+}
+
+#chord-inspector-delete-btn:hover:not(:disabled) {
+    background-color: var(--accent-red-hover);
+    border-color: var(--accent-red-hover);
+}
+
 #clear-extractor-btn {
     background-color: var(--accent-red);
     border-color: var(--accent-red);
@@ -197,10 +207,18 @@ select {
 
 .chord-display-header {
     display: flex;
+    flex-direction: column; /* Apila los elementos verticalmente */
     justify-content: center;
     align-items: center;
-    gap: 20px; /* Más espacio entre elementos */
-    margin: 30px 0; /* Margen ajustado */
+    gap: 15px; /* Espacio vertical entre el contenedor de botones y el nombre del acorde */
+    margin: 30px 0 15px; /* Reducido el margen inferior */
+}
+
+.modifications-and-play-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px; /* Espacio entre el editor de modificaciones y el botón de play */
 }
 
 #chord-name {
@@ -231,11 +249,11 @@ select {
 .piano {
     position: relative;
     display: flex;
-    margin: 40px 0;
+    margin: 20px 0; /* Reducido el margen superior e inferior */
     width: fit-content;
-    padding: 30px; /* Más padding */
+    padding: 12px; /* Más padding */
     background: #1e1e1e;
-    border-radius: 15px; /* Más redondeado */
+    border-radius: 12px; /* Más redondeado */
     box-shadow: var(--shadow); /* Usar la nueva sombra */
 }
 
@@ -797,7 +815,7 @@ select {
 }
 
 #chord-inspector-modal .piano {
-    padding: 15px;
+    padding: 10px;
     margin: 0;
 }
 
