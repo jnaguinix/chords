@@ -89,7 +89,7 @@ export const CHORD_TYPE_MAP: { [key: string]: string } = {
     '13': '13na (13)',
     '11': '11na (11)',
     '9': '9na Dominante (9)',
-        '7ma Dominante (7)': '7',
+    '7': '7ma Dominante (7)',
     '6': '6ta Mayor (6)',
     '5': 'Power Chord (5)',
     'min': 'Menor', // Alias
