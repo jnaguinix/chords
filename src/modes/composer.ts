@@ -242,11 +242,27 @@ export class Composer {
     private updateChordInSong = (updatedItem: SequenceItem) => {
         if (!this.currentSong || updatedItem.id === undefined) return;
 
+        let found = false;
+        // Primero, actualiza el acorde en la estructura anidada `lines`, que es la fuente de la verdad para el renderizado.
+        for (const line of this.currentSong.lines) {
+            for (const songChord of line.chords) {
+                if (songChord.chord.id === updatedItem.id) {
+                    songChord.chord = updatedItem;
+                    found = true;
+                    break;
+                }
+            }
+            if (found) break;
+        }
+
+        // Luego, actualiza también la lista plana `allChords` para mantener la consistencia.
         const chordIndex = this.currentSong.allChords.findIndex(c => c.id === updatedItem.id);
         if (chordIndex !== -1) {
             this.currentSong.allChords[chordIndex] = updatedItem;
-            this.sheetManager.render();
         }
+
+        // Finalmente, vuelve a renderizar la partitura para mostrar los cambios.
+        this.sheetManager.render();
     }
 
     private handleDeleteChord = (itemToDelete: SequenceItem): void => {

@@ -58,13 +58,26 @@ export class Extractor {
             getSong: () => this.originalSong, // El extractor siempre trabaja sobre la canción original
             getTransposition: () => this.transpositionManager.getOffset(),
             updateChord: (updatedItem) => {
-                // El extractor actualiza el acorde en la canción original
                 if (!this.originalSong || updatedItem.id === undefined) return;
+
+                let found = false;
+                for (const line of this.originalSong.lines) {
+                    for (const songChord of line.chords) {
+                        if (songChord.chord.id === updatedItem.id) {
+                            songChord.chord = updatedItem;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found) break;
+                }
+
                 const index = this.originalSong.allChords.findIndex(c => c.id === updatedItem.id);
                 if (index > -1) {
                     this.originalSong.allChords[index] = updatedItem;
-                    this.sheetManager.render(); // Vuelve a renderizar para mostrar el cambio
                 }
+
+                this.sheetManager.render();
             },
             deleteChord: (itemToDelete) => {
                 // El extractor también necesita poder borrar acordes

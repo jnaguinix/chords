@@ -38,7 +38,6 @@ export function getChordNotes(item: SequenceItem, transpositionOffset: number = 
     const chordBaseAbsoluteIndex = rootNoteIndex + 12 * 3;
     let fundamentalChordNotes = baseIntervals.map((interval: number) => chordBaseAbsoluteIndex + interval);
     
-    // Aplica las alteraciones (ej. #5, b9)
     if (item.alterations) {
         item.alterations.forEach((alt: string) => {
             const alterationInfo = ALTERATION_MAP[alt];
@@ -53,7 +52,6 @@ export function getChordNotes(item: SequenceItem, transpositionOffset: number = 
         });
     }
 
-    // Aplica las adiciones (ej. add11)
     if (item.additions) {
         item.additions.forEach((add: any) => {
             const additionInfo = ADDITION_MAP[add];
@@ -93,7 +91,6 @@ export function parseChordString(chord: string): SequenceItem | null {
     const sanitizedChord = chord.trim();
     if (!sanitizedChord) return null;
     
-    // El símbolo de repetición o pipe no se analizan como acordes.
     if (sanitizedChord === '%' || sanitizedChord === '|') return null; 
 
     if (sanitizedChord.startsWith('(') && sanitizedChord.endsWith(')')) {
@@ -176,28 +173,45 @@ export function parseChordString(chord: string): SequenceItem | null {
 export function formatChordName(item: SequenceItem, options: { style: 'short' | 'long' }, transpositionOffset: number = 0): string {
     if (!item) return '';
 
-    // Si el acorde es un pipe o repetición, muestra el símbolo.
     if (item.raw === '%' || item.raw === '|') return item.raw;
 
     if (!item.rootNote || !item.type) return item.raw || '';
     
     if (options.style === 'short') {
-        const suffix = CHORD_TYPE_TO_SUFFIX[item.type] ?? '';
         const root = transposeNote(item.rootNote, transpositionOffset);
         const bass = item.bassNote ? transposeNote(item.bassNote, transpositionOffset) : null;
-        
-        let displayName = root + suffix;
-        if (item.alterations) displayName += item.alterations.join('');
-        if (item.additions) displayName += item.additions.join('');
-        if (bass && bass !== root) displayName += `/${bass}`;
+        const suffix = CHORD_TYPE_TO_SUFFIX[item.type] ?? '';
+
+        let alterationsString = '';
+        const allMods = [...(item.alterations || []), ...(item.additions || [])];
+
+        if (allMods.length > 0) {
+            // Ordenar las alteraciones numéricamente para consistencia (ej: b5, #9, add11)
+            const sortedMods = allMods.sort((a, b) => {
+                const numA = parseInt(a.replace(/[^0-9]/g, ''), 10);
+                const numB = parseInt(b.replace(/[^0-9]/g, ''), 10);
+                return numA - numB;
+            });
+            alterationsString = `(${sortedMods.join(',')})`;
+        }
+
+        let displayName = root + suffix + alterationsString;
+        if (bass && bass !== root) {
+            displayName += `/${bass}`;
+        }
         
         return displayName;
     }
 
     if (options.style === 'long') {
         let displayName = `${transposeNote(item.rootNote, transpositionOffset)} ${item.type}`;
-        if (item.alterations) displayName += ` con alteraciones ${item.alterations.join(', ')}`;
-        if (item.additions) displayName += ` con adiciones ${item.additions.join(', ')}`;
+        // --- CORRECCIÓN AQUÍ ---
+        if (item.alterations && item.alterations.length > 0) {
+            displayName += ` con alteraciones ${item.alterations.join(', ')}`;
+        }
+        if (item.additions && item.additions.length > 0) {
+            displayName += ` con adiciones ${item.additions.join(', ')}`;
+        }
         if (item.bassNote && transposeNote(item.bassNote, transpositionOffset) !== transposeNote(item.rootNote, transpositionOffset)) {
             displayName += ` / ${transposeNote(item.bassNote, transpositionOffset)}`;
         }
@@ -209,6 +223,7 @@ export function formatChordName(item: SequenceItem, options: { style: 'short' | 
 }
 
 export function parseSongText(songText: string): ProcessedSong {
+    // ... (El resto del archivo no necesita cambios)
     songText = songText.replace(/\t/g, '    ');
     const rawLines = songText.split('\n');
     const processedLines: SongLine[] = [];
@@ -240,14 +255,15 @@ export function parseSongText(songText: string): ProcessedSong {
                 numChordLikeTokens++;
                 continue;
             }
-
+            
+            // Intenta parsear el token completo primero
             if (parseChordString(token) !== null) {
                 numChordLikeTokens++;
                 continue;
             }
 
-            const subTokens = token.split(/[-–]/g).filter(Boolean);
-            
+            // Si falla, intenta dividir por guiones (para C-G-Am)
+            const subTokens = token.split(/(-)/).filter(t => t !== '-' && t.trim() !== '');
             if (subTokens.length <= 1) {
                 const isMusicalAnnotation = token.toLowerCase() === 'n.c.' || token.toLowerCase() === 'x' || (token.startsWith('(') && token.endsWith(')'));
                 if (!isMusicalAnnotation) {
@@ -275,7 +291,7 @@ export function parseSongText(songText: string): ProcessedSong {
             return false;
         }
 
-        return tokens.length > 0 && (numChordLikeTokens / tokens.length) >= 0.5;
+        return tokens.length > 0;
     };
 
     let i = 0;
@@ -284,9 +300,7 @@ export function parseSongText(songText: string): ProcessedSong {
         let currentLineChords: SongChord[] = [];
         let currentLineLyrics = '';
         let isInstrumental = false;
-        
         let lastParsedChord: SequenceItem | null = null;
-        
         let lineToParseForChords = currentRawLine;
         let label = '';
         let chordOffset = 0;
@@ -305,7 +319,6 @@ export function parseSongText(songText: string): ProcessedSong {
                 currentLineChords.push({ chord: annotationItem, position: 0, isAnnotation: true });
             }
             
-            // --- CAMBIO CLAVE: EL REGEX AHORA INCLUYE EL PIPE COMO TOKEN INDIVIDUAL ---
             const chordRegex = /\([^)]+\)|\||\S+/g;
             let match;
 
@@ -315,30 +328,29 @@ export function parseSongText(songText: string): ProcessedSong {
                 const token = match[0];
                 const position = match.index + chordOffset;
                 
-                // --- MANEJO DE SÍMBOLOS ESPECIALES ---
-                if (token === '%' || token === '|') {
-                    const symbolItem: SequenceItem = { raw: token, rootNote: '', type: '' };
-                    
-                    // Si es repetición, hereda el acorde anterior.
-                    if (token === '%' && lastParsedChord) {
-                        symbolItem.rootNote = lastParsedChord.rootNote;
-                        symbolItem.type = lastParsedChord.type;
-                        symbolItem.alterations = lastParsedChord.alterations;
-                        symbolItem.additions = lastParsedChord.additions;
-                        symbolItem.bassNote = lastParsedChord.bassNote;
+                const processToken = (subToken: string, subPosition: number) => {
+                    if (subToken === '%' || subToken === '|') {
+                        const symbolItem: SequenceItem = { raw: subToken, rootNote: '', type: '' };
+                        if (subToken === '%' && lastParsedChord) {
+                            Object.assign(symbolItem, lastParsedChord, { raw: '%' });
+                        }
+                        currentLineChords.push({ chord: symbolItem, position: subPosition, isAnnotation: (subToken === '|') });
+                        return;
                     }
-                    
-                    currentLineChords.push({ chord: symbolItem, position, isAnnotation: (token === '|') });
-                    continue;
-                }
 
-                const parsedFullToken = parseChordString(token);
+                    const parsedChord = parseChordString(subToken);
+                    if (parsedChord) {
+                        currentLineChords.push({ chord: parsedChord, position: subPosition });
+                        allChords.push(parsedChord);
+                        lastParsedChord = parsedChord;
+                        return true;
+                    }
+                    return false;
+                };
 
-                if (parsedFullToken) {
-                    currentLineChords.push({ chord: parsedFullToken, position: position });
-                    allChords.push(parsedFullToken);
-                    lastParsedChord = parsedFullToken;
-                } else {
+                const parsedFullToken = processToken(token, position);
+
+                if (!parsedFullToken) {
                     const subTokens = token.split(/(-)/);
                     let currentPosition = position;
                     let foundChordsInGroup = false;
@@ -348,13 +360,8 @@ export function parseSongText(songText: string): ProcessedSong {
                             currentPosition += subToken.length;
                             continue;
                         }
-
-                        const parsedSubToken = parseChordString(subToken);
-                        if (parsedSubToken) {
+                        if (processToken(subToken, currentPosition)) {
                             foundChordsInGroup = true;
-                            currentLineChords.push({ chord: parsedSubToken, position: currentPosition });
-                            allChords.push(parsedSubToken);
-                            lastParsedChord = parsedSubToken;
                         }
                         currentPosition += subToken.length;
                     }
@@ -388,17 +395,32 @@ export function parseSongText(songText: string): ProcessedSong {
 }
 
 export function applyTransposition(songToTranspose: ProcessedSong, transpositionOffset: number): ProcessedSong {
-    // --- FUNCIÓN CORREGIDA ---
-    // Solo necesitamos iterar sobre la lista principal de acordes.
-    // Los cambios se reflejarán en las líneas automáticamente porque son referencias al mismo objeto.
-    songToTranspose.allChords.forEach(chord => {
-        if (chord.rootNote && chord.type) { // Solo transponer si es un acorde válido
+    // 1. Crear un mapa para evitar duplicados y facilitar la búsqueda
+    const chordsMap = new Map<number, SequenceItem>();
+    songToTranspose.allChords.forEach(c => c.id !== undefined && chordsMap.set(c.id, c));
+
+    // 2. Transportar cada acorde único UNA SOLA VEZ
+    chordsMap.forEach(chord => {
+        if (chord.rootNote) {
             chord.rootNote = transposeNote(chord.rootNote, transpositionOffset);
-            if (chord.bassNote) {
-                chord.bassNote = transposeNote(chord.bassNote, transpositionOffset);
-            }
+        }
+        if (chord.bassNote) {
+            chord.bassNote = transposeNote(chord.bassNote, transpositionOffset);
         }
     });
+
+    // 3. Re-sincronizar las líneas para que apunten a los acordes ya transportados
+    songToTranspose.lines.forEach(line => {
+        line.chords.forEach(songChord => {
+            if (songChord.chord.id !== undefined && !songChord.isAnnotation && songChord.chord.raw !== '%') {
+                 const transposedChord = chordsMap.get(songChord.chord.id);
+                 if (transposedChord) {
+                     songChord.chord = transposedChord;
+                 }
+            }
+        });
+    });
+
     return songToTranspose;
 }
 

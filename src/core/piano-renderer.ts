@@ -1,6 +1,57 @@
-import { IS_BLACK_KEY, INDEX_TO_SHARP_NAME } from '../constants'; // <-- CAMBIO AQUÍ
+import { IS_BLACK_KEY, INDEX_TO_SHARP_NAME, INDEX_TO_FLAT_NAME, NOTE_TO_INDEX } from '../constants';
 import { formatChordName } from './chord-utils';
 import type { SongLine, SequenceItem, SongChord } from '../types';
+
+// =============================================
+// ========= NUEVA FUNCIÓN UNIFICADA ===========
+// =============================================
+/**
+ * Rellena un elemento <select> con opciones de notas musicales, manejando enarmonías.
+ * @param selectElement El elemento <select> a rellenar.
+ * @param notesToShow La lista de nombres de notas a incluir.
+ * @param includeEmptyOption Si se debe añadir una opción vacía (ej. "Sin Bajo").
+ * @param emptyOptionText El texto para la opción vacía.
+ */
+export function populateNoteSelector(
+    selectElement: HTMLSelectElement,
+    notesToShow: string[],
+    includeEmptyOption: boolean = false,
+    emptyOptionText: string = 'Sin Bajo'
+): void {
+    selectElement.innerHTML = '';
+
+    if (includeEmptyOption) {
+        const defaultOption = document.createElement('option');
+        defaultOption.value = "none";
+        defaultOption.textContent = emptyOptionText;
+        selectElement.appendChild(defaultOption);
+    }
+
+    const uniqueNotesMap = new Map<number, { sharp: string, flat: string }>();
+    notesToShow.forEach(note => {
+        const index = NOTE_TO_INDEX[note];
+        if (!uniqueNotesMap.has(index)) {
+            uniqueNotesMap.set(index, {
+                sharp: INDEX_TO_SHARP_NAME[index],
+                flat: INDEX_TO_FLAT_NAME[index]
+            });
+        }
+    });
+
+    uniqueNotesMap.forEach(({ sharp, flat }) => {
+        const option = document.createElement('option');
+        if (sharp === flat) {
+            option.value = sharp;
+            option.textContent = sharp;
+        } else {
+            // Para enarmónicas, el valor es el sostenido, y el texto muestra ambos.
+            option.value = sharp;
+            option.textContent = `${sharp} / ${flat}`;
+        }
+        selectElement.appendChild(option);
+    });
+}
+
 
 // La función createPiano no cambia y permanece como está.
 export function createPiano(
@@ -22,7 +73,7 @@ export function createPiano(
         const noteIndexMod = (i % 12 + 12) % 12;
         if (IS_BLACK_KEY[noteIndexMod]) continue;
 
-        const noteName = INDEX_TO_SHARP_NAME[noteIndexMod]; // <-- Y CAMBIO AQUÍ
+        const noteName = INDEX_TO_SHARP_NAME[noteIndexMod];
         const whiteKey = document.createElement('div');
         whiteKey.className = 'key white';
         
@@ -68,17 +119,13 @@ export function createPiano(
 interface SongSheetCallbacks {
     onShortClick: (item: SequenceItem) => void;
     onLongClick: (item: SequenceItem) => void;
-    transposition: number; // Añadir la propiedad de transposición
+    transposition: number;
 }
 
-// =========================================================================
-// ========= ESTA ES LA FUNCIÓN MODIFICADA PARA LA NUEVA LÓGICA CSS ========
-// =========================================================================
 export function createSongSheet(
     container: HTMLElement,
     lines: SongLine[],
     callbacks: SongSheetCallbacks,
-    // --- CAMBIO AQUÍ: Se eliminó el parámetro 'transposition' no utilizado ---
 ): void {
     container.innerHTML = '';
     container.className = 'song-sheet-container';
@@ -93,33 +140,29 @@ export function createSongSheet(
 
         const lyricsLayer = document.createElement('div');
         lyricsLayer.className = 'lyrics-layer';
-        lyricsLayer.textContent = line.lyrics || '\u00A0'; // \u00A0 es un espacio 'no rompible' para mantener la altura
+        lyricsLayer.textContent = line.lyrics || '\u00A0';
 
         line.chords.forEach((songChord: SongChord) => {
             const chord = songChord.chord;
             const position = songChord.position;
             const isAnnotation = songChord.isAnnotation;
 
-            // CAMBIO: Creamos un span exterior para el POSICIONAMIENTO
             const positionerEl = document.createElement('span');
             positionerEl.className = 'chord-positioner';
-            // El posicionamiento con 'ch' se aplica al elemento exterior
             positionerEl.style.left = `${position}ch`;
 
-            // CAMBIO: Creamos un span interior para la APARIENCIA y la INTERACCIÓN
             const visualEl = document.createElement('span');
-            visualEl.className = 'chord-visual'; // Nueva clase para el estilo
-            visualEl.textContent = formatChordName(chord, { style: 'short' }, callbacks.transposition); // Siempre usar formatChordName con transposición
+            visualEl.className = 'chord-visual';
+            visualEl.textContent = formatChordName(chord, { style: 'short' }, callbacks.transposition);
             
             if (isAnnotation) {
                 visualEl.classList.add('chord-annotation');
             } else {
-                visualEl.classList.add('chord-action'); // La interacción se aplica al visual
+                visualEl.classList.add('chord-action');
                 if (line.isInstrumental) {
                     visualEl.classList.add('instrumental');
                 }
 
-                // Lógica de clic corto vs. clic largo
                 let clickTimer: number | null = null;
                 const longClickDuration = 500;
 
@@ -143,46 +186,38 @@ export function createSongSheet(
                     }
                 });
 
-                // --- LÓGICA DEL TOOLTIP CORREGIDA ---
                 const globalTooltip = document.getElementById('global-tooltip') as HTMLElement;
                 visualEl.addEventListener('mouseenter', () => {
-                    globalTooltip.textContent = formatChordName(chord, { style: 'long' }, callbacks.transposition);
-                    
                     const rect = visualEl.getBoundingClientRect();
                     const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
                     const scrollY = window.pageYOffset || document.documentElement.scrollTop;
 
-                    // Medir el tooltip fuera de la pantalla para obtener su ancho real
+                    globalTooltip.textContent = formatChordName(chord, { style: 'long' }, callbacks.transposition);
+
                     globalTooltip.style.visibility = 'hidden';
-                    globalTooltip.style.left = '-1000px';
-                    globalTooltip.style.top = '-1000px';
+                    globalTooltip.style.opacity = '0';
+                    globalTooltip.style.left = '0px';
+                    globalTooltip.style.top = '0px';
                     globalTooltip.style.transform = 'none';
                     globalTooltip.style.visibility = 'visible';
+                    
                     const tooltipWidth = globalTooltip.offsetWidth;
                     const tooltipHeight = globalTooltip.offsetHeight;
                     globalTooltip.style.visibility = 'hidden';
 
-                    // Calcular posición inicial (idealmente centrada)
-                    let tooltipLeft = rect.left + scrollX + (rect.width / 2) - (tooltipWidth / 2);
-                    const tooltipTop = rect.top + scrollY - tooltipHeight - 5; // 5px de margen
-
-                    // --- COMPROBACIÓN DE BORDES (Edge Detection) ---
-                    const viewportWidth = window.innerWidth;
-                    const rightEdge = tooltipLeft + tooltipWidth;
-
-                    // Si se sale por la derecha, lo alineamos al borde derecho de la pantalla
-                    if (rightEdge > viewportWidth - 10) { // 10px de margen de seguridad
-                        tooltipLeft = viewportWidth - tooltipWidth - 10;
-                    }
-                    // Si se sale por la izquierda, lo alineamos al borde izquierdo
-                    if (tooltipLeft < 10) {
-                        tooltipLeft = 10;
+                    let tooltipLeft = rect.left + scrollX + (rect.width / 2);
+                    
+                    if (tooltipLeft - (tooltipWidth / 2) < 5) {
+                        tooltipLeft = (tooltipWidth / 2) + 5;
+                    } else if (tooltipLeft + (tooltipWidth / 2) > window.innerWidth - 5) {
+                        tooltipLeft = window.innerWidth - (tooltipWidth / 2) - 5;
                     }
                     
-                    // Aplicar posición final
+                    const tooltipTop = rect.top + scrollY - tooltipHeight - 5;
+
                     globalTooltip.style.left = `${tooltipLeft}px`;
                     globalTooltip.style.top = `${tooltipTop}px`;
-                    globalTooltip.style.transform = 'none'; // Ya no se necesita el translateX(-50%)
+                    globalTooltip.style.transform = 'translateX(-50%)';
                     globalTooltip.style.opacity = '1';
                     globalTooltip.style.visibility = 'visible';
                 });
@@ -195,7 +230,6 @@ export function createSongSheet(
                 visualEl.addEventListener('mouseleave', clearTimer);
             }
             
-            // CAMBIO: Anidamos el visual dentro del posicionador
             positionerEl.appendChild(visualEl);
             chordsLayer.appendChild(positionerEl);
         });

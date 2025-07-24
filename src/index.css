@@ -53,14 +53,6 @@ body {
 /* ENCABEZADO Y TÍTULO                          */
 /* ============================================ */
 
-header h1 {
-    font-size: 2rem; /* Tamaño de fuente ajustado */
-    font-weight: 700;
-    margin-bottom: 0.8rem; /* Más margen inferior */
-    color: var(--accent-green);
-    font-family: 'Victor Mono', monospace; /* Forzar Victor Mono */
-}
-
 .description {
     display: none;
 }
@@ -388,21 +380,6 @@ select {
     display: none;
 }
 
-.composition-actions {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-}
-
-#clear-sequence-btn {
-    background-color: var(--accent-red);
-    border-color: var(--accent-red);
-}
-#clear-sequence-btn:hover:not(:disabled) {
-    background-color: var(--accent-red-hover);
-    border-color: var(--accent-red-hover);
-}
-
 .composer-controls-group {
     display: flex;
     flex-direction: column;
@@ -641,26 +618,6 @@ select {
     box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
 }
 
-.chord-visual .chord-tooltip {
-    position: absolute;
-    bottom: 30px; /* Ajustar a un valor fijo en píxeles */
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: var(--bg-main);
-    color: var(--text-main);
-    padding: 8px 14px; 
-    border-radius: 6px;
-    font-size: 2.8rem; 
-    font-weight: 500;
-    white-space: nowrap;
-    z-index: 9999; /* Aumentar z-index para asegurar que esté por encima */
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s, visibility 0.2s, bottom 0.2s;
-    pointer-events: none;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
-}
-
 
 .chord-visual:hover .chord-tooltip {
     opacity: 1;
@@ -738,6 +695,11 @@ select {
     border-bottom: 1px solid var(--grey);
     margin-bottom: 20px;
     gap: 15px;
+}
+
+.inspector-actions {
+    display: flex;
+    gap: 10px; /* Espacio entre los botones de acción */
 }
 
 #chord-inspector-title {
@@ -818,11 +780,10 @@ select {
 }
 
 .inspector-controls {
-    display: flex;
-    justify-content: space-around;
-    gap: 15px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px; /* Aumentamos un poco el espacio para más claridad */
     margin-bottom: 25px;
-    flex-wrap: wrap;
 }
 
 .inspector-controls .select-wrapper {
@@ -915,3 +876,69 @@ select {
             align-items: center;
             gap: 8px;
         }
+/* ============================================= */
+/* ====== ESTILOS PARA DISPLAY DE ALTERACIONES === */
+/* ============================================= */
+
+.modifications-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 15px auto; /* Centrado y con margen vertical */
+    padding: 8px 15px;
+    background-color: var(--bg-main); /* Un fondo que contraste un poco */
+    border: 1px solid var(--grey);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    max-width: fit-content; /* Se ajusta al contenido */
+}
+
+.mod-label {
+    font-weight: 500;
+    color: var(--text-muted-color);
+}
+
+.mod-list {
+    color: var(--accent-yellow);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: bold;
+}
+/* ============================================= */
+/* ====== ESTILOS PARA EDITOR DE ALTERACIONES ==== */
+/* ============================================= */
+
+.modifications-editor {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 20px auto;
+    max-width: 90%;
+}
+
+.mod-button {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--grey);
+    background-color: var(--bg-card);
+    color: var(--text-muted-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.mod-button:hover {
+    background-color: var(--grey);
+    color: var(--white);
+}
+
+.mod-button.selected {
+    background-color: var(--accent-yellow);
+    color: var(--black);
+    border-color: var(--accent-yellow);
+    font-weight: bold;
+}
