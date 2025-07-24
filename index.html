@@ -15,12 +15,11 @@
       }
     }
     </script>
-  <script type="module" crossorigin src="/assets/index-BmMIaoPE.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-Dl0oXuM7.css">
+  <script type="module" crossorigin src="/assets/index-lioVQRgM.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BeOOTrSE.css">
 </head>
 <body>
     <div id="app">
-        
         
         <nav class="tabs">
             <button id="visualizer-tab" class="tab active">Visualizador</button>
@@ -29,7 +28,6 @@
         </nav>
 
         <main id="visualizer-mode" class="mode-content active">
-            <!-- ... Contenido del modo Visualizador ... -->
              <div class="controls">
                 <div class="select-wrapper">
                     <label for="root-note-select">Nota Raíz</label>
@@ -49,6 +47,7 @@
                 </div>
             </div>
             <div class="chord-display-header">
+                <div id="visualizer-modifications-editor" class="modifications-container"></div>
                 <h2 id="chord-name"></h2>
                 <button id="visualizer-play-btn" class="play-btn" aria-label="Reproducir acorde">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" fill="currentColor"><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg>
@@ -56,33 +55,20 @@
             </div>
             <div id="piano-container">
                 <div class="piano" aria-label="Piano virtual">
-                    <!-- Las teclas del piano serán generadas aquí por TypeScript -->
                 </div>
             </div>
         </main>
 
-        <!-- ============================================= -->
-        <!-- ===== SECCIÓN DEL EXTRACTOR MODIFICADA ====== -->
-        <!-- ============================================= -->
         <main id="extractor-mode" class="mode-content">
              <p class="description" style="max-width: 650px;">Pega la letra y los acordes de una canción. Haz clic en un acorde para ver su diagrama y escucharlo.</p>
-            <textarea id="song-input" placeholder="Pega o escribe tu canción aquí....
-            
-Consejos para un análisis perfecto:
--Letra siempre en minúsculas.
--Acordes principales siempre fuera de paréntesis.
--Para bajos, une el acorde y el bajo: Am/G (correcto) vs Am / G (incorrecto).
--Para secuencias, usa guiones: G-C-D."></textarea>
+            <textarea id="song-input" placeholder="Pega o escribe tu canción aquí...."></textarea>
             
             <div class="extractor-controls-container">
-                <!-- Grupo de botones de la izquierda -->
                 <div class="extractor-actions-left">
                     <button id="process-song-btn" class="button-primary">Analizar</button>
                     <button id="add-to-composer-btn" class="button-secondary" disabled>Añadir al Compositor</button>
                     <button id="clear-extractor-btn" class="button-secondary">Limpiar</button>
                 </div>
-
-                <!-- Grupo de botones de la derecha (transposición) -->
                 <div class="extractor-actions-right">
                     <div id="transposition-controls" class="transposition-controls" style="display: none;">
                         <button id="transpose-down-btn" class="button-secondary">-</button>
@@ -97,26 +83,16 @@ Consejos para un análisis perfecto:
                 <p>Analizando...</p>
             </div>
             <div id="song-output" class="song-sheet-container">
-                 <!-- La canción procesada se mostrará aquí -->
             </div>
         </main>
-        <!-- ============================================= -->
-        <!-- ========== FIN DE LA MODIFICACIÓN =========== -->
-        <!-- ============================================= -->
 
-        <!-- SECCIÓN DEL COMPOSITOR ACTUALIZADA -->
         <main id="composer-mode" class="mode-content">
-            <!-- El texto de descripción ha sido eliminado -->
-            
             <div class="composition-header">
                 <div class="piano-and-name-container">
                     <h2 id="composer-chord-name-display" class="chord-name-display"></h2>
-                    <!-- Nuevo contenedor para el piano -->
                     <div id="composer-piano-display" class="piano-container-small">
-                        <!-- El piano del compositor se renderizará aquí -->
                     </div>
                 </div>
-                <!-- El botón de limpiar ahora está a la derecha -->
                 <div class="composer-controls-group">
                     <div id="composer-transposition-controls" class="controls">
                         <button id="composer-transpose-down-btn" class="button-secondary">-</button>
@@ -129,24 +105,24 @@ Consejos para un análisis perfecto:
                     </div>
                 </div>
             </div>
-
             <div id="composition-output">
-                <!-- La composición generada se mostrará aquí -->
             </div>
-
             <div id="chord-insertion-indicator" class="insert-placeholder" style="display: none;">+</div>
         </main>
 
-        <!-- ... Resto del HTML (Modales, etc.) ... -->
-         <div id="chord-inspector-overlay"></div>
+        <div id="chord-inspector-overlay"></div>
         <div id="chord-inspector-modal">
             <div class="inspector-header">
                 <h3 id="chord-inspector-title"></h3>
                 <button id="chord-inspector-play-btn" class="play-btn">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" fill="currentColor"><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg>
                 </button>
-                <button id="chord-inspector-insert-btn" class="button-primary" style="margin-left: 15px;">Insertar</button>
-                <button id="chord-inspector-delete-btn" class="button-secondary" style="background-color: #792525; margin-left: 15px;">Eliminar</button>
+                <!-- --- CONTENEDOR DE BOTONES DE ACCIÓN --- -->
+                <div class="inspector-actions">
+                    <button id="chord-inspector-save-btn" class="button-primary">Guardar</button>
+                    <button id="chord-inspector-insert-btn" class="button-primary">Insertar</button>
+                    <button id="chord-inspector-delete-btn" class="button-secondary">Eliminar</button>
+                </div>
                 <button id="chord-inspector-close-btn">×</button>
             </div>
 
@@ -159,17 +135,17 @@ Consejos para un análisis perfecto:
                     <label for="chord-inspector-type-select">Tipo de Acorde</label>
                     <select id="chord-inspector-type-select"></select>
                 </div>
-                
                 <div class="select-wrapper">
                     <label for="chord-inspector-bass-note-select">Bajo en (Opcional)</label>
                     <select id="chord-inspector-bass-note-select"></select>
                 </div>
-
                 <div class="select-wrapper">
                     <label for="chord-inspector-inversion-select">Inversión</label>
                     <select id="chord-inspector-inversion-select"></select>
                 </div>
             </div>
+            
+            <div id="chord-inspector-modifications-editor" class="modifications-container"></div>
             
             <div id="chord-inspector-piano"></div>
         </div>
