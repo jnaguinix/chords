@@ -1,5 +1,13 @@
+/*
+================================================================================
+|                               visualizer.ts                                  |
+|            (Versión final con selectores de acordes dinámicos)               |
+================================================================================
+*/
+
 import { getChordNotes, calculateOptimalPianoRange, formatChordName } from '../core/chord-utils';
-import { createPiano, populateNoteSelector } from '../core/piano-renderer';
+// ANOTACIÓN: Se importa la nueva función centralizada.
+import { createPiano, populateNoteSelector, populateChordTypeSelector } from '../core/piano-renderer';
 import type { AudioEngine } from '../core/audio';
 import { MUSICAL_INTERVALS, INDEX_TO_SHARP_NAME, INDEX_TO_FLAT_NAME, NOTE_TO_INDEX } from '../constants';
 import type { SequenceItem } from '../types';
@@ -30,13 +38,14 @@ export class Visualizer {
 
     public init(): void {
         this.populateSelectors();
-        // --- CORRECCIÓN AQUÍ ---
-        // Se llama a updateInversionSelect en la inicialización para asegurar que se rellene.
-        this.updateInversionSelect(); 
         this.addEventListeners();
+        this.updateInversionSelect();
         this.handleChordChange();
     }
     
+    /**
+     * Rellena los selectores de notas y el de acordes por primera vez.
+     */
     private populateSelectors(): void {
         const allNotes = [...new Set([...INDEX_TO_SHARP_NAME, ...INDEX_TO_FLAT_NAME])].sort((a,b) => NOTE_TO_INDEX[a] - NOTE_TO_INDEX[b] || a.localeCompare(b));
         
@@ -46,39 +55,10 @@ export class Visualizer {
         populateNoteSelector(this.elements.bassNoteSelect, allNotes, true);
         this.elements.bassNoteSelect.value = 'none';
 
-        Object.keys(MUSICAL_INTERVALS).forEach(type => {
-            const option = document.createElement('option');
-            option.value = type;
-            option.textContent = type;
-            this.elements.chordTypeSelect.appendChild(option);
-        });
-        this.elements.chordTypeSelect.value = 'Mayor';
+        // ANOTACIÓN: Se llama a la función centralizada con la nota raíz inicial.
+        populateChordTypeSelector(this.elements.chordTypeSelect, 'C', 'Mayor');
     }
     
-    private populateModificationsEditor(): void {
-        this.elements.modificationsEditor.innerHTML = '';
-        EDITABLE_ALTERATIONS.forEach(alt => {
-            const button = document.createElement('button');
-            button.className = 'mod-button';
-            button.textContent = alt;
-            button.dataset.alt = alt;
-            if (this.currentChord.alterations?.includes(alt)) {
-                button.classList.add('selected');
-            }
-            button.addEventListener('click', () => {
-                if (!this.currentChord.alterations) this.currentChord.alterations = [];
-                const altIndex = this.currentChord.alterations.indexOf(alt);
-                if (altIndex > -1) {
-                    this.currentChord.alterations.splice(altIndex, 1);
-                } else {
-                    this.currentChord.alterations.push(alt);
-                }
-                this.handleChordChange();
-            });
-            this.elements.modificationsEditor.appendChild(button);
-        });
-    }
-
     private addEventListeners(): void {
         this.elements.rootNoteSelect.addEventListener('change', this.handleChordChange);
         this.elements.chordTypeSelect.addEventListener('change', this.handleChordChange);
@@ -93,6 +73,9 @@ export class Visualizer {
         }
     }
 
+    /**
+     * Actualiza el selector de inversiones basado en el número de notas del acorde.
+     */
     private updateInversionSelect(): void {
         const selectedType = this.elements.chordTypeSelect.value;
         const intervals = MUSICAL_INTERVALS[selectedType];
@@ -108,6 +91,7 @@ export class Visualizer {
                 option.textContent = i === 0 ? 'Fundamental' : `${i}ª Inversión`;
                 this.elements.inversionSelect.appendChild(option);
             }
+            // Si la inversión actual es inválida para el nuevo acorde, resetea a fundamental.
             if (currentInversion >= numNotes) {
                 this.elements.inversionSelect.value = '0';
             } else {
@@ -116,25 +100,44 @@ export class Visualizer {
         }
     }
 
+    /**
+     * Manejador principal que se activa cada vez que cambia un selector.
+     * Recalcula el estado, actualiza la UI y redibuja el piano.
+     */
     private handleChordChange = (): void => {
-        const typeChanged = this.currentChord.type !== this.elements.chordTypeSelect.value;
+        const previousType = this.currentChord.type;
+        const previousRoot = this.currentChord.rootNote;
         
-        if (typeChanged) {
+        const newRoot = this.elements.rootNoteSelect.value;
+        const newType = this.elements.chordTypeSelect.value;
+
+        // ANOTACIÓN: ¡Aquí está la magia!
+        // Si la nota raíz cambió, volvemos a poblar la lista de acordes.
+        if (newRoot !== previousRoot) {
+            populateChordTypeSelector(this.elements.chordTypeSelect, newRoot, newType);
+        }
+        
+        // Si el tipo de acorde cambió, actualizamos las inversiones disponibles.
+        if (newType !== previousType) {
              this.updateInversionSelect();
         }
         
-        this.currentChord.rootNote = this.elements.rootNoteSelect.value;
-        this.currentChord.type = this.elements.chordTypeSelect.value;
+        // Actualiza el estado interno del acorde.
+        this.currentChord.rootNote = newRoot;
+        this.currentChord.type = newType;
         this.currentChord.bassNote = this.elements.bassNoteSelect.value === 'none' ? undefined : this.elements.bassNoteSelect.value;
         this.currentChord.inversion = parseInt(this.elements.inversionSelect.value, 10);
         
-        if (typeChanged) {
+        // Si el tipo de acorde cambió, reseteamos las alteraciones.
+        if (newType !== previousType) {
             this.currentChord.alterations = [];
         }
 
+        // Actualiza la UI.
         this.elements.chordNameDisplay.textContent = formatChordName(this.currentChord, { style: 'long' });
         this.populateModificationsEditor();
 
+        // Obtiene las notas y redibuja el piano.
         const { 
             notesToPress, 
             bassNoteIndex, 
@@ -158,4 +161,31 @@ export class Visualizer {
             (noteIndex) => this.audioEngine.playNote(noteIndex)
         );
     };
+
+    /**
+     * Rellena el editor de alteraciones y maneja sus eventos.
+     */
+    private populateModificationsEditor(): void {
+        this.elements.modificationsEditor.innerHTML = '';
+        EDITABLE_ALTERATIONS.forEach(alt => {
+            const button = document.createElement('button');
+            button.className = 'mod-button';
+            button.textContent = alt;
+            button.dataset.alt = alt;
+            if (this.currentChord.alterations?.includes(alt)) {
+                button.classList.add('selected');
+            }
+            button.addEventListener('click', () => {
+                if (!this.currentChord.alterations) this.currentChord.alterations = [];
+                const altIndex = this.currentChord.alterations.indexOf(alt);
+                if (altIndex > -1) {
+                    this.currentChord.alterations.splice(altIndex, 1);
+                } else {
+                    this.currentChord.alterations.push(alt);
+                }
+                this.handleChordChange();
+            });
+            this.elements.modificationsEditor.appendChild(button);
+        });
+    }
 }

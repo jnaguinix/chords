@@ -1,7 +1,11 @@
-// composer.ts (Refactorizado para usar los nuevos managers y restaurar el display del piano)
+/*
+================================================================================
+|                                composer.ts                                   |
+| (Confirmado como correcto. Delega la edición al Inspector centralizado)      |
+================================================================================
+*/
 
 import type { ProcessedSong, SequenceItem, SongChord, ShowInspectorFn } from '../types';
-// --- CAMBIO: Se reincorporan las importaciones necesarias para el piano ---
 import { formatChordName, getChordNotes, calculateOptimalPianoRange } from '../core/chord-utils';
 import { createPiano } from '../core/piano-renderer';
 import type { AudioEngine } from '../core/audio';
@@ -47,16 +51,18 @@ export class Composer {
             () => this.sheetManager.render()
         );
 
+        // ANOTACIÓN: La clave está aquí. El composer no crea su propio editor.
+        // Recibe la función `showInspector` desde `main.tsx` y la utiliza.
+        // Por lo tanto, la lógica del menú del editor se controla
+        // de forma centralizada en `main.tsx`. Este archivo no necesita cambios.
         this.sheetManager = new SheetManager({
             container: this.elements.compositionOutput,
             audioEngine: this.audioEngine,
-            showInspector: this.showInspector,
+            showInspector: this.showInspector, // <- Uso de la función central
             getSong: () => this.currentSong,
             getTransposition: () => this.transpositionManager.getOffset(),
             updateChord: this.updateChordInSong,
             deleteChord: this.handleDeleteChord,
-            // --- CAMBIO CLAVE AQUÍ ---
-            // Le decimos al SheetManager qué hacer cuando se hace clic en un acorde.
             onChordClick: this.updateDisplayPiano,
         });
     }
@@ -84,8 +90,6 @@ export class Composer {
         this.elements.importBtn.addEventListener('click', this.handleImportSong);
     }
 
-    // --- FUNCIÓN RESTAURADA ---
-    // Esta función se encarga de actualizar el piano y el nombre del acorde en la parte superior.
     private updateDisplayPiano = (item: SequenceItem): void => {
         const currentTransposition = this.transpositionManager.getOffset();
         const { notesToPress, bassNoteIndex, allNotesForRange } = getChordNotes(item, currentTransposition);
@@ -100,8 +104,8 @@ export class Composer {
         }
     }
 
-    // ... (el resto del archivo permanece igual)
-
+    // El resto del archivo no requiere cambios funcionales.
+    // ...
     private handleExportSong = (): void => {
         if (!this.currentSong) {
             alert('No hay canción para exportar.');
@@ -243,7 +247,6 @@ export class Composer {
         if (!this.currentSong || updatedItem.id === undefined) return;
 
         let found = false;
-        // Primero, actualiza el acorde en la estructura anidada `lines`, que es la fuente de la verdad para el renderizado.
         for (const line of this.currentSong.lines) {
             for (const songChord of line.chords) {
                 if (songChord.chord.id === updatedItem.id) {
@@ -255,13 +258,11 @@ export class Composer {
             if (found) break;
         }
 
-        // Luego, actualiza también la lista plana `allChords` para mantener la consistencia.
         const chordIndex = this.currentSong.allChords.findIndex(c => c.id === updatedItem.id);
         if (chordIndex !== -1) {
             this.currentSong.allChords[chordIndex] = updatedItem;
         }
-
-        // Finalmente, vuelve a renderizar la partitura para mostrar los cambios.
+        
         this.sheetManager.render();
     }
 

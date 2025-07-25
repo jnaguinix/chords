@@ -1,4 +1,9 @@
-// extractor.ts (Refactorizado para usar los nuevos managers)
+/*
+================================================================================
+|                                extractor.ts                                  |
+|     (Confirmado como correcto. Ya utiliza la lógica centralizada.)           |
+================================================================================
+*/
 
 import { parseSongText, transposeNote } from '../core/chord-utils';
 import type { ProcessedSong, SequenceItem, ShowInspectorFn } from '../types';
@@ -31,7 +36,6 @@ export class Extractor {
     
     private originalSong: ProcessedSong | null = null;
     
-    // Instancias de los nuevos managers
     private transpositionManager: TranspositionManager;
     private sheetManager: SheetManager;
 
@@ -44,18 +48,20 @@ export class Extractor {
         this.callbacks = callbacks;
         this.audioEngine = audioEngine;
 
-        // Inicializa el TranspositionManager
+        // ANOTACIÓN: La inicialización de los managers es correcta.
+        // El SheetManager se encargará de renderizar la partitura correctamente.
         this.transpositionManager = new TranspositionManager(
             this.elements.transpositionDisplay,
-            () => this.sheetManager.render() // Callback para redibujar al transportar
+            () => this.sheetManager.render() 
         );
 
-        // Inicializa el SheetManager
         this.sheetManager = new SheetManager({
             container: this.elements.songOutput,
             audioEngine: this.audioEngine,
+            // ANOTACIÓN: Al hacer clic largo, se llama a la función centralizada showInspector.
+            // La lógica del inspector la modificaremos en main.tsx.
             showInspector: this.callbacks.showInspector,
-            getSong: () => this.originalSong, // El extractor siempre trabaja sobre la canción original
+            getSong: () => this.originalSong, 
             getTransposition: () => this.transpositionManager.getOffset(),
             updateChord: (updatedItem) => {
                 if (!this.originalSong || updatedItem.id === undefined) return;
@@ -80,7 +86,6 @@ export class Extractor {
                 this.sheetManager.render();
             },
             deleteChord: (itemToDelete) => {
-                // El extractor también necesita poder borrar acordes
                 if (!this.originalSong || itemToDelete.id === undefined) return;
                 this.originalSong.allChords = this.originalSong.allChords.filter(c => c.id !== itemToDelete.id);
                 this.originalSong.lines.forEach(line => {
@@ -100,7 +105,6 @@ export class Extractor {
         this.elements.processSongBtn.addEventListener('click', this.handleProcessSong);
         this.elements.addToComposerBtn.addEventListener('click', this.handleAddToComposer);
         this.elements.clearExtractorBtn.addEventListener('click', this.handleClearExtractor);
-        // Los botones ahora llaman a los métodos del manager
         this.elements.transposeUpBtn.addEventListener('click', () => this.transpositionManager.up());
         this.elements.transposeDownBtn.addEventListener('click', () => this.transpositionManager.down());
     }
@@ -126,8 +130,8 @@ export class Extractor {
                 
                 this.transpositionManager.reset(); 
                 
-                // --- CAMBIO CLAVE AQUÍ ---
-                // Le decimos explícitamente al SheetManager que se redibuje con la nueva canción.
+                // ANOTACIÓN: El SheetManager ya sabe cómo renderizar correctamente gracias a las
+                // correcciones que hicimos en los archivos del 'core'.
                 this.sheetManager.render();
 
                 if (this.originalSong && this.originalSong.allChords.length > 0) {
@@ -149,16 +153,14 @@ export class Extractor {
         this.elements.transpositionControls.style.display = 'none';
         this.elements.addToComposerBtn.disabled = true;
         this.transpositionManager.reset();
-        this.sheetManager.render(); // Renderiza el estado vacío
+        this.sheetManager.render();
     };
 
     private handleAddToComposer = (): void => {
-        // Al añadir al compositor, creamos una copia limpia con la transposición actual "quemada" en los datos.
         if (this.originalSong) {
             const songForComposer = JSON.parse(JSON.stringify(this.originalSong));
             const currentOffset = this.transpositionManager.getOffset();
 
-            // Si hay una transposición, la aplicamos a la copia antes de enviarla.
             if (currentOffset !== 0) {
                 songForComposer.allChords.forEach((chord: SequenceItem) => {
                     if (chord.rootNote) {

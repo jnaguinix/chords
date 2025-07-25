@@ -1,42 +1,41 @@
 import * as Tone from 'tone';
 import type { SequenceItem } from '../types';
 import { getChordNotes } from './chord-utils';
-// --- CAMBIO AQUÍ ---
-// Se reemplaza la constante eliminada por la nueva.
 import { INDEX_TO_SHARP_NAME } from '../constants';
+
+let isAudioReady = false;
+
+// --- CAMBIO AQUÍ ---
+// Nueva función exportada para inicializar el contexto de audio.
+// Debe ser llamada desde un evento de usuario (ej. click).
+export async function initAudio(): Promise<void> {
+    if (isAudioReady) return;
+    try {
+        await Tone.start();
+        isAudioReady = true;
+        console.log('Audio context started successfully.');
+    } catch (e) {
+        console.error('Failed to start audio context:', e);
+    }
+}
 
 export class AudioEngine {
     private sampler: Tone.Sampler | null = null;
-    private isReady = false;
+    private isSamplerReady = false;
     private isInitializing = false;
 
-    // This method ensures the audio context is started and the sampler is loaded.
-    // It's called automatically before any sound is played.
-    private async ensureReady(): Promise<boolean> {
-        // If already ready, do nothing.
-        if (this.isReady) return true;
-        
-        // If it's already initializing in the background, wait for it to finish.
-        if (this.isInitializing) {
-            return new Promise(resolve => {
-                const interval = setInterval(() => {
-                    if (this.isReady) {
-                        clearInterval(interval);
-                        resolve(true);
-                    }
-                }, 100);
-            });
-        }
-        
-        // Start initialization.
-        this.isInitializing = true;
-        
-        try {
-            // Tone.start() must be called after a user gesture (e.g., click).
-            // It returns a promise that resolves when the audio context is started.
-            await Tone.start();
+    constructor() {
+        // La inicialización del sampler ahora se dispara en el constructor,
+        // pero no bloquea. Se cargará en segundo plano.
+        this.initSampler();
+    }
 
-            // Create the sampler with a map of notes to audio files.
+    // Método privado para cargar el sampler.
+    private async initSampler(): Promise<void> {
+        if (this.isSamplerReady || this.isInitializing) return;
+        
+        this.isInitializing = true;
+        try {
             this.sampler = new Tone.Sampler({
                 urls: {
                     A2: "A2.mp3", C3: "C3.mp3", "D#3": "Ds3.mp3", "F#3": "Fs3.mp3", 
@@ -45,31 +44,49 @@ export class AudioEngine {
                     A5: "A5.mp3",
                 },
                 release: 1,
-                // Use Tone.js's hosted samples for convenience.
                 baseUrl: "https://tonejs.github.io/audio/salamander/",
             }).toDestination();
             
-            // Wait for all the samples to be loaded.
             await Tone.loaded();
-
-            this.isReady = true;
-            console.log('Audio engine (Tone.js) ready.');
-            
+            this.isSamplerReady = true;
+            console.log('Audio engine (Tone.js) sampler ready.');
         } catch (e) {
-            console.error("Tone.js failed to initialize:", e);
-            this.isReady = false;
+            console.error("Tone.js sampler failed to initialize:", e);
         } finally {
             this.isInitializing = false;
         }
+    }
+
+    // El método `ensureReady` ahora solo comprueba que el sampler esté cargado.
+    private async ensureReady(): Promise<boolean> {
+        // --- CAMBIO AQUÍ ---
+        // Si el contexto de audio global no está listo, no podemos continuar.
+        if (!isAudioReady) {
+            console.warn("Audio context not initialized. User interaction needed.");
+            return false;
+        }
+
+        if (this.isSamplerReady) return true;
         
-        return this.isReady;
+        // Si el sampler todavía se está cargando, esperamos.
+        if (this.isInitializing) {
+            return new Promise(resolve => {
+                const interval = setInterval(() => {
+                    if (this.isSamplerReady) {
+                        clearInterval(interval);
+                        resolve(true);
+                    }
+                }, 100);
+            });
+        }
+        
+        // Si por alguna razón no se inició la carga, la iniciamos ahora.
+        await this.initSampler();
+        return this.isSamplerReady;
     }
     
-    // Converts our internal numeric note index (e.g., 60) to a Tone.js note name (e.g., "C4").
     private convertNoteIndexToToneJSNote(noteIndex: number): string {
         const octave = Math.floor(noteIndex / 12);
-        // --- Y CAMBIO AQUÍ ---
-        // Se usa la nueva constante para obtener el nombre de la nota.
         const noteName = INDEX_TO_SHARP_NAME[noteIndex % 12];
         return `${noteName}${octave}`;
     }
@@ -84,8 +101,6 @@ export class AudioEngine {
     public async playChord(item: SequenceItem, transpositionOffset: number = 0): Promise<void> {
         if (!(await this.ensureReady()) || !this.sampler) return;
 
-        // --- CORRECCIÓN AQUÍ ---
-        // Se eliminó el segundo argumento 'true' de la llamada a getChordNotes.
         const { notesToPress, bassNoteIndex } = getChordNotes(item, transpositionOffset);
         
         const allNotesToPlay = [...notesToPress];
@@ -93,10 +108,8 @@ export class AudioEngine {
             allNotesToPlay.push(bassNoteIndex);
         }
         
-        // Convert all numeric indices to Tone.js note names.
         const notesAsStrings = allNotesToPlay.map(note => this.convertNoteIndexToToneJSNote(note));
         
-        // Tone.js's sampler can play an array of notes at once.
         this.sampler.triggerAttackRelease(notesAsStrings, 2.0);
     }
 }

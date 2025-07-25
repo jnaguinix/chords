@@ -1,10 +1,19 @@
+/*
+================================================================================
+|                                  main.tsx                                    |
+|   (Versión final con corrección de sincronización de audio e inversiones)    |
+================================================================================
+*/
+
 import './index.css';
 import { Visualizer } from './modes/visualizer';
 import { Composer } from './modes/composer';
 import { Extractor } from './modes/extractor';
-import { AudioEngine } from './core/audio';
-import { createPiano, populateNoteSelector } from './core/piano-renderer';
-import { getChordNotes, calculateOptimalPianoRange } from './core/chord-utils';
+// --- CAMBIO AQUÍ ---
+// Se importa la nueva función de inicialización de audio.
+import { AudioEngine, initAudio } from './core/audio';
+import { createPiano, populateNoteSelector, populateChordTypeSelector } from './core/piano-renderer';
+import { getChordNotes, calculateOptimalPianoRange, formatChordName } from './core/chord-utils';
 import { MUSICAL_INTERVALS, NOTE_TO_INDEX, INDEX_TO_SHARP_NAME, INDEX_TO_FLAT_NAME } from './constants';
 import type { SequenceItem, ProcessedSong, InspectorCallbacks, ShowInspectorFn } from './types';
 
@@ -19,6 +28,7 @@ class PianoApp {
     private extractor: Extractor;
     private audioEngine: AudioEngine;
 
+    // Propiedades del Inspector de Acordes
     private chordInspectorModal: HTMLElement;
     private chordInspectorOverlay: HTMLElement;
     private chordInspectorTitle: HTMLElement;
@@ -27,8 +37,7 @@ class PianoApp {
     private chordInspectorCloseBtn: HTMLButtonElement;
     private chordInspectorDeleteBtn: HTMLButtonElement;
     private chordInspectorInsertBtn: HTMLButtonElement;
-    // --- NUEVO BOTÓN ---
-    private chordInspectorSaveBtn: HTMLButtonElement; 
+    private chordInspectorSaveBtn: HTMLButtonElement;
     private chordInspectorRootNoteSelect: HTMLSelectElement;
     private chordInspectorTypeSelect: HTMLSelectElement;
     private chordInspectorBassNoteSelect: HTMLSelectElement;
@@ -39,6 +48,7 @@ class PianoApp {
     private currentInspectorCallbacks: InspectorCallbacks | null = null;
 
     constructor() {
+        // El constructor permanece igual
         this.tabs = {
             visualizer: document.getElementById('visualizer-tab')!,
             composer: document.getElementById('composer-tab')!,
@@ -56,8 +66,8 @@ class PianoApp {
         this.chordInspectorPlayBtn = document.getElementById('chord-inspector-play-btn') as HTMLButtonElement;
         this.chordInspectorCloseBtn = document.getElementById('chord-inspector-close-btn') as HTMLButtonElement;
         this.chordInspectorDeleteBtn = document.getElementById('chord-inspector-delete-btn') as HTMLButtonElement;
-        this.chordInspectorInsertBtn = document.getElementById('chord-inspector-insert-btn') as HTMLButtonElement; 
-        this.chordInspectorSaveBtn = document.getElementById('chord-inspector-save-btn') as HTMLButtonElement; // Get new button
+        this.chordInspectorInsertBtn = document.getElementById('chord-inspector-insert-btn') as HTMLButtonElement;
+        this.chordInspectorSaveBtn = document.getElementById('chord-inspector-save-btn') as HTMLButtonElement;
         this.chordInspectorRootNoteSelect = document.getElementById('chord-inspector-root-note-select') as HTMLSelectElement;
         this.chordInspectorTypeSelect = document.getElementById('chord-inspector-type-select') as HTMLSelectElement;
         this.chordInspectorBassNoteSelect = document.getElementById('chord-inspector-bass-note-select') as HTMLSelectElement;
@@ -80,7 +90,7 @@ class PianoApp {
                 compositionOutput: document.getElementById('composition-output')!,
                 insertionIndicator: document.getElementById('chord-insertion-indicator')!,
                 composerPianoDisplay: document.getElementById('composer-piano-display')!,
-                composerChordNameDisplay: document.getElementById('composer-chord-name-display')!, 
+                composerChordNameDisplay: document.getElementById('composer-chord-name-display')!,
                 transpositionControls: document.getElementById('composer-transposition-controls')!,
                 transposeUpBtn: document.getElementById('composer-transpose-up-btn') as HTMLButtonElement,
                 transposeDownBtn: document.getElementById('composer-transpose-down-btn') as HTMLButtonElement,
@@ -121,17 +131,17 @@ class PianoApp {
         this.extractor.init();
         this.chordInspectorCloseBtn.addEventListener('click', this.hideChordInspector);
         this.chordInspectorOverlay.addEventListener('click', this.hideChordInspector);
+
         this.chordInspectorRootNoteSelect.addEventListener('change', this.handleInspectorChange);
         this.chordInspectorTypeSelect.addEventListener('change', this.handleInspectorChange);
         this.chordInspectorBassNoteSelect.addEventListener('change', this.handleInspectorChange);
         this.chordInspectorInversionSelect.addEventListener('change', this.handleInspectorChange);
+
         this.chordInspectorInsertBtn.addEventListener('click', this.handleInspectorInsert);
         this.chordInspectorDeleteBtn.addEventListener('click', this.handleInspectorDelete);
-        // --- NUEVO EVENT LISTENER ---
         this.chordInspectorSaveBtn.addEventListener('click', this.handleInspectorSave);
     }
-    
-    // --- NUEVA FUNCIÓN DE GUARDADO ---
+
     private handleInspectorSave = (): void => {
         if (this.currentInspectorItem && this.currentInspectorCallbacks?.onUpdate) {
             this.currentInspectorCallbacks.onUpdate(this.currentInspectorItem);
@@ -142,42 +152,58 @@ class PianoApp {
     private handleInspectorInsert = (): void => {
         if (this.currentInspectorItem && this.currentInspectorCallbacks?.onInsert) {
             this.currentInspectorCallbacks.onInsert(this.currentInspectorItem);
-            this.hideChordInspector();
         }
+        this.hideChordInspector();
     };
 
     private handleInspectorDelete = (): void => {
         if (this.currentInspectorItem && this.currentInspectorCallbacks?.onDelete) {
             this.currentInspectorCallbacks.onDelete(this.currentInspectorItem);
-            this.hideChordInspector();
         }
+        this.hideChordInspector();
     };
-    
-    // --- FUNCIÓN MODIFICADA: ya no guarda automáticamente ---
+
     private handleInspectorChange = (): void => {
         if (!this.currentInspectorItem) return;
+    
+        const rootNoteBeforeChange = this.currentInspectorItem.rootNote;
+        const typeBeforeChange = this.currentInspectorItem.type;
+    
         const newRootNote = this.chordInspectorRootNoteSelect.value;
         const newType = this.chordInspectorTypeSelect.value;
-        const newBassNote = this.chordInspectorBassNoteSelect.value;
+        const newBassNote = this.chordInspectorBassNoteSelect.value === 'none' ? undefined : this.chordInspectorBassNoteSelect.value;
         const newInversion = parseInt(this.chordInspectorInversionSelect.value, 10);
-        const typeChanged = this.currentInspectorItem.type !== newType;
+    
         this.currentInspectorItem.rootNote = newRootNote;
         this.currentInspectorItem.type = newType;
-        this.currentInspectorItem.bassNote = (newBassNote === 'none') ? undefined : newBassNote;
-        this.currentInspectorItem.inversion = newInversion;
-        if (typeChanged) {
+        this.currentInspectorItem.bassNote = newBassNote;
+        this.currentInspectorItem.inversion = isNaN(newInversion) ? 0 : newInversion;
+    
+        const rootNoteChanged = rootNoteBeforeChange !== newRootNote;
+        const typeChanged = typeBeforeChange !== newType;
+    
+        if (rootNoteChanged) {
+            populateChordTypeSelector(this.chordInspectorTypeSelect, newRootNote, typeBeforeChange);
+            this.currentInspectorItem.type = this.chordInspectorTypeSelect.value;
+        }
+    
+        if (rootNoteChanged || typeChanged) {
             this.currentInspectorItem.inversion = 0;
+            this.currentInspectorItem.alterations = [];
             this.populateInversionSelect(this.currentInspectorItem);
+            this.populateModificationsEditor(this.currentInspectorItem);
         }
-        if (newInversion >= this.chordInspectorInversionSelect.options.length) {
-            this.currentInspectorItem.inversion = 0;
-            this.chordInspectorInversionSelect.value = '0';
-        }
+    
+        this.updateInspectorUI();
+    }
+
+    private updateInspectorUI(): void {
+        if (!this.currentInspectorItem) return;
+        this.chordInspectorTitle.textContent = formatChordName(this.currentInspectorItem, { style: 'long' });
         this.renderChordInspectorPiano(this.currentInspectorItem);
-        // Se elimina la llamada a onUpdate para que no se guarde automáticamente
     }
     
-    // --- FUNCIÓN MODIFICADA: el click en alteración ya no guarda automáticamente ---
+
     private populateModificationsEditor(item: SequenceItem): void {
         this.chordInspectorModificationsEditor.innerHTML = '';
         EDITABLE_ALTERATIONS.forEach(alt => {
@@ -199,9 +225,8 @@ class PianoApp {
                 } else {
                     this.currentInspectorItem.alterations.push(alt);
                 }
-                this.populateModificationsEditor(this.currentInspectorItem);
-                this.renderChordInspectorPiano(this.currentInspectorItem);
-                // Se elimina la llamada a onUpdate
+                this.updateInspectorUI();
+                button.classList.toggle('selected');
             });
             this.chordInspectorModificationsEditor.appendChild(button);
         });
@@ -234,18 +259,15 @@ class PianoApp {
     
     private populateSelects(item: SequenceItem): void {
         const allNotes = [...new Set([...INDEX_TO_SHARP_NAME, ...INDEX_TO_FLAT_NAME])].sort((a, b) => NOTE_TO_INDEX[a] - NOTE_TO_INDEX[b] || a.localeCompare(b));
+        
         populateNoteSelector(this.chordInspectorRootNoteSelect, allNotes);
         this.chordInspectorRootNoteSelect.value = item.rootNote;
+        
         populateNoteSelector(this.chordInspectorBassNoteSelect, allNotes, true);
         this.chordInspectorBassNoteSelect.value = item.bassNote || 'none';
-        this.chordInspectorTypeSelect.innerHTML = '';
-        Object.keys(MUSICAL_INTERVALS).forEach(type => {
-            const option = document.createElement('option');
-            option.value = type;
-            option.textContent = type;
-            this.chordInspectorTypeSelect.appendChild(option);
-        });
-        this.chordInspectorTypeSelect.value = item.type;
+        
+        populateChordTypeSelector(this.chordInspectorTypeSelect, item.rootNote, item.type);
+        
         this.populateInversionSelect(item);
     }
     
@@ -253,7 +275,10 @@ class PianoApp {
         const currentInversion = item.inversion || 0;
         this.chordInspectorInversionSelect.innerHTML = '';
         const intervals = MUSICAL_INTERVALS[item.type];
-        const numNotes = intervals ? intervals.length : 0;
+        
+        if (!intervals) return; 
+
+        const numNotes = intervals.length;
         if (numNotes > 0) {
             for (let i = 0; i < numNotes; i++) {
                 const option = document.createElement('option');
@@ -265,28 +290,36 @@ class PianoApp {
         }
     }
     
-    // --- FUNCIÓN MODIFICADA: para mostrar/ocultar botones ---
     public showInspector: ShowInspectorFn = (item, callbacks): void => {
         if (!item) return;
+        
         const isNewChord = item.id === undefined;
-        this.currentInspectorItem = { ...item };
+        this.currentInspectorItem = JSON.parse(JSON.stringify(item));
         this.currentInspectorCallbacks = callbacks || {};
-        this.chordInspectorTitle.textContent = isNewChord ? 'Insertar Acorde' : 'Editar Acorde';
+
+        // ANOTACIÓN: ¡La corrección clave está aquí!
+        // Añadimos una comprobación para asegurarnos de que `currentInspectorItem` no es null
+        // antes de pasarlo a las funciones que no lo permiten.
+        if (!this.currentInspectorItem) return;
+
         this.populateSelects(this.currentInspectorItem);
         this.populateModificationsEditor(this.currentInspectorItem);
-        this.chordInspectorPlayBtn.onclick = () => this.audioEngine.playChord(this.currentInspectorItem!);
+        this.updateInspectorUI(); 
+
+        this.chordInspectorPlayBtn.onclick = () => {
+            if (this.currentInspectorItem) {
+                this.audioEngine.playChord(this.currentInspectorItem);
+            }
+        };
         
-        // Lógica para mostrar los botones correctos
         this.chordInspectorInsertBtn.style.display = isNewChord ? 'block' : 'none';
         this.chordInspectorSaveBtn.style.display = isNewChord ? 'none' : 'block';
         this.chordInspectorDeleteBtn.style.display = !isNewChord && this.currentInspectorCallbacks.onDelete ? 'block' : 'none';
 
-        this.renderChordInspectorPiano(this.currentInspectorItem!);
         this.chordInspectorModal.classList.add('visible');
         this.chordInspectorOverlay.classList.add('visible');
     }
     
-    // --- FUNCIÓN MODIFICADA: ya no guarda al cerrar ---
     public hideChordInspector = (): void => {
         this.chordInspectorModal.classList.remove('visible');
         this.chordInspectorOverlay.classList.remove('visible');
@@ -296,5 +329,17 @@ class PianoApp {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // --- CAMBIO AQUÍ ---
+    // Se añade un listener para inicializar el audio con la primera interacción del usuario.
+    const initAudioOnFirstInteraction = () => {
+        initAudio();
+        // Se elimina el listener después del primer uso para no ejecutarlo más veces.
+        document.body.removeEventListener('click', initAudioOnFirstInteraction);
+        document.body.removeEventListener('keydown', initAudioOnFirstInteraction);
+    };
+
+    document.body.addEventListener('click', initAudioOnFirstInteraction);
+    document.body.addEventListener('keydown', initAudioOnFirstInteraction);
+
     new PianoApp();
 });

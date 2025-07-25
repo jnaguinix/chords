@@ -1,16 +1,18 @@
-import { IS_BLACK_KEY, INDEX_TO_SHARP_NAME, INDEX_TO_FLAT_NAME, NOTE_TO_INDEX } from '../constants';
+/*
+================================================================================
+|                             piano-renderer.ts                                |
+|        (Refactorizado para generar selectores de acordes dinámicos)          |
+================================================================================
+*/
+
+// ANOTACIÓN: Se importan las nuevas dependencias necesarias.
+import { CHORD_DISPLAY_LIST, IS_BLACK_KEY, INDEX_TO_SHARP_NAME, INDEX_TO_FLAT_NAME, NOTE_TO_INDEX } from '../constants';
 import { formatChordName } from './chord-utils';
 import type { SongLine, SequenceItem, SongChord } from '../types';
 
-// =============================================
-// ========= NUEVA FUNCIÓN UNIFICADA ===========
-// =============================================
 /**
- * Rellena un elemento <select> con opciones de notas musicales, manejando enarmonías.
- * @param selectElement El elemento <select> a rellenar.
- * @param notesToShow La lista de nombres de notas a incluir.
- * @param includeEmptyOption Si se debe añadir una opción vacía (ej. "Sin Bajo").
- * @param emptyOptionText El texto para la opción vacía.
+ * Rellena un <select> con opciones de notas musicales.
+ * (Esta función no necesita cambios, su lógica es sólida).
  */
 export function populateNoteSelector(
     selectElement: HTMLSelectElement,
@@ -44,7 +46,6 @@ export function populateNoteSelector(
             option.value = sharp;
             option.textContent = sharp;
         } else {
-            // Para enarmónicas, el valor es el sostenido, y el texto muestra ambos.
             option.value = sharp;
             option.textContent = `${sharp} / ${flat}`;
         }
@@ -52,8 +53,54 @@ export function populateNoteSelector(
     });
 }
 
+// =============================================
+// ========= FUNCIÓN CLAVE MODIFICADA ==========
+// =============================================
+/**
+ * Rellena un <select> con los nombres de acordes completos, basados en una nota raíz.
+ * @param selectElement El elemento <select> a rellenar.
+ * @param rootNote La nota raíz actual (ej. "C", "F#").
+ * @param defaultValue El tipo de acorde que debe quedar seleccionado (ej. "Mayor").
+ */
+export function populateChordTypeSelector(
+    selectElement: HTMLSelectElement, 
+    rootNote: string,
+    defaultValue: string = 'Mayor'
+): void {
+    selectElement.innerHTML = ''; // Limpia opciones anteriores
 
-// La función createPiano no cambia y permanece como está.
+    CHORD_DISPLAY_LIST.forEach(chordInfo => {
+        const option = document.createElement('option');
+
+        if (chordInfo.isSeparator) {
+            option.textContent = chordInfo.text;
+            option.disabled = true;
+            option.classList.add('chord-category-separator'); // Opcional: para estilos CSS
+            option.value = ''; // Asegura que no tenga un valor seleccionable
+        } else {
+            // El 'value' sigue siendo el nombre interno del TIPO (ej. "Mayor 7 (maj7)")
+            // Esto es crucial para que el resto de tu lógica no se rompa.
+            option.value = chordInfo.value; 
+
+            // Creamos un acorde temporal para obtener su nombre formateado.
+            const tempItem: SequenceItem = { rootNote: rootNote, type: chordInfo.value };
+            
+            // El 'textContent' es el nombre completo que ve el usuario (ej. "Cmaj7").
+            option.textContent = formatChordName(tempItem, { style: 'short' }); 
+        }
+        
+        selectElement.appendChild(option);
+    });
+
+    // Selecciona el valor por defecto.
+    selectElement.value = defaultValue;
+}
+
+
+/**
+ * Dibuja el piano en el DOM.
+ * (Esta función no necesita cambios).
+ */
 export function createPiano(
     container: HTMLElement, 
     startNote: number, 
@@ -115,7 +162,7 @@ export function createPiano(
     container.appendChild(pianoEl);
 }
 
-
+// createSongSheet no necesita cambios.
 interface SongSheetCallbacks {
     onShortClick: (item: SequenceItem) => void;
     onLongClick: (item: SequenceItem) => void;
