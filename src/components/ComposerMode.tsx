@@ -287,7 +287,14 @@ const ComposerMode: React.FC<ComposerModeProps> = ({ audioEngine, showInspector,
         onChordClick: updateDisplayPiano,
       });
     }
-  }, [audioEngine, showInspector, updateChordInSong, handleDeleteChord, updateDisplayPiano]); // Empty dependency array for one-time initialization
+  }, [audioEngine, showInspector, updateDisplayPiano]);
+
+  // Update SheetManager callbacks when they change
+  useEffect(() => {
+    if (sheetManagerRef.current) {
+      sheetManagerRef.current.updateCallbacks(updateChordInSong, handleDeleteChord);
+    }
+  }, [updateChordInSong, handleDeleteChord]);
 
   // Render sheet when currentSong or transpositionOffset changes
   useEffect(() => {

@@ -27,6 +27,11 @@ export class SheetManager {
         this.config = config;
     }
 
+    public updateCallbacks(newUpdateChord: (updatedItem: SequenceItem) => void, newDeleteChord: (itemToDelete: SequenceItem) => void) {
+        this.config.updateChord = newUpdateChord;
+        this.config.deleteChord = newDeleteChord;
+    }
+
     /** Dibuja o actualiza la partitura en el contenedor HTML. */
     public render(song: ProcessedSong | null, transposition: number): void {
         this.config.container.innerHTML = '';
