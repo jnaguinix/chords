@@ -278,7 +278,7 @@ select {
     position: relative;
     flex-shrink: 1; /* Permite que las teclas se encojan */
     flex-grow: 1; /* Permite que las teclas crezcan */
-    min-width: 30px; /* Ancho mínimo para las teclas blancas */
+    min-width: 20px; /* Ancho mínimo para las teclas blancas */
     max-width: 60px; /* Ancho máximo para las teclas blancas */
 }
 
