@@ -121,10 +121,13 @@ export const CHORD_DISPLAY_LIST = [
   { text: 'Ext.', isSeparator: true, value: '' },
   { text: 'maj9', value: 'maj9' },
   { text: 'madd9', value: 'madd9' },
+  { text: '7b9', value: '7b9' },
+  { text: '7#9', value: '7#9' },
   { text: '9', value: '9' },
   { text: 'm9', value: 'm9' },
   { text: '13', value: '13' },
   { text: 'm11', value: 'm11' },
+  { text: 'maj7#11', value: 'maj7#11' },
   { text: '9sus4', value: '9sus4' },
 ];
 

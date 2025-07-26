@@ -5,11 +5,11 @@
 ================================================================================
 */
 
-import { getChordNotes, calculateOptimalPianoRange, formatChordName } from '../core/chord-utils';
+import { getChordNotes, calculateOptimalPianoRange, formatChordName } from '../utils/chord-utils';
 // ANOTACIÓN: Se importa la nueva función centralizada.
-import { createPiano, populateNoteSelector, populateChordTypeSelector } from '../core/piano-renderer';
-import type { AudioEngine } from '../core/audio';
-import { MUSICAL_INTERVALS, INDEX_TO_SHARP_NAME, INDEX_TO_FLAT_NAME, NOTE_TO_INDEX } from '../constants';
+import { createPiano, populateNoteSelector, populateChordTypeSelector } from '../utils/piano-renderer';
+import type { AudioEngine } from '../utils/audio';
+import { MUSICAL_INTERVALS, INDEX_TO_SHARP_NAME, INDEX_TO_FLAT_NAME, NOTE_TO_INDEX } from '../utils/constants';
 import type { SequenceItem } from '../types';
 
 const EDITABLE_ALTERATIONS = ['b5', '#5', 'b9', '#9', '#11', 'b13'];
@@ -158,7 +158,7 @@ export class Visualizer {
             notesToPress,
             false, 
             bassNoteIndex,
-            (noteIndex) => this.audioEngine.playNote(noteIndex)
+            (noteIndex: number) => this.audioEngine.playNote(noteIndex)
         );
     };
 

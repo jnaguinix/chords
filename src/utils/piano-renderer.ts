@@ -6,7 +6,7 @@
 */
 
 // ANOTACIÓN: Se importan las nuevas dependencias necesarias.
-import { CHORD_DISPLAY_LIST, IS_BLACK_KEY, INDEX_TO_SHARP_NAME, INDEX_TO_FLAT_NAME, NOTE_TO_INDEX } from '../constants';
+import { CHORD_DISPLAY_LIST, IS_BLACK_KEY, INDEX_TO_SHARP_NAME, INDEX_TO_FLAT_NAME, NOTE_TO_INDEX } from './constants';
 import { formatChordName } from './chord-utils';
 import type { SongLine, SequenceItem, SongChord } from '../types';
 

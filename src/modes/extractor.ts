@@ -5,11 +5,11 @@
 ================================================================================
 */
 
-import { parseSongText, transposeNote } from '../core/chord-utils';
+import { parseSongText, transposeNote } from '../utils/chord-utils';
 import type { ProcessedSong, SequenceItem, ShowInspectorFn } from '../types';
-import type { AudioEngine } from '../core/audio';
-import { TranspositionManager } from '../core/transposition-manager';
-import { SheetManager } from '../core/sheet-manager';
+import type { AudioEngine } from '../utils/audio';
+import { TranspositionManager } from '../utils/transposition-manager';
+import { SheetManager } from '../utils/sheet-manager';
 
 interface ExtractorElements {
     songInput: HTMLTextAreaElement;
@@ -63,7 +63,7 @@ export class Extractor {
             showInspector: this.callbacks.showInspector,
             getSong: () => this.originalSong, 
             getTransposition: () => this.transpositionManager.getOffset(),
-            updateChord: (updatedItem) => {
+            updateChord: (updatedItem: SequenceItem) => {
                 if (!this.originalSong || updatedItem.id === undefined) return;
 
                 let found = false;
@@ -85,7 +85,7 @@ export class Extractor {
 
                 this.sheetManager.render();
             },
-            deleteChord: (itemToDelete) => {
+            deleteChord: (itemToDelete: SequenceItem) => {
                 if (!this.originalSong || itemToDelete.id === undefined) return;
                 this.originalSong.allChords = this.originalSong.allChords.filter(c => c.id !== itemToDelete.id);
                 this.originalSong.lines.forEach(line => {

@@ -14,7 +14,7 @@ import {
     CHORD_DISPLAY_LIST,
     NOTE_NAME_SPANISH,          // ANOTACIÓN: Importamos el nuevo diccionario de notas
     CHORD_TYPE_TO_READABLE_NAME // ANOTACIÓN: Importamos el nuevo diccionario de tipos de acorde
-} from '../constants';
+} from './constants';
 import type { SequenceItem, ProcessedSong, SongLine, SongChord } from '../types';
 
 // El resto de las constantes y funciones de bajo nivel no necesitan cambios.
@@ -225,7 +225,7 @@ export function parseSongText(songText: string): ProcessedSong {
     const isChordLine = (line: string): boolean => {
         const trimmedLine = line.trim();
         if (!trimmedLine) return false;
-        if (trimmedLine.match(/^\[[^\]]+\]$/) || trimmedLine.endsWith(':')) {
+        if (trimmedLine.match(/^\\[[^\]]+\\]$/) || trimmedLine.endsWith(':')) {
             return false;
         }
         let contentToAnalyze = trimmedLine;
@@ -279,7 +279,7 @@ export function parseSongText(songText: string): ProcessedSong {
         let lineToParseForChords = currentRawLine;
         let label = '';
         let chordOffset = 0;
-        const labelRegex = /^(\s*(?:\u005b[^\]]+\u005d|[^:]+:\s*))/;
+        const labelRegex = /^(?:\s*(?:\u005b[^\]]+\u005d|[^:]+:\s*))/;
         const labelMatch = lineToParseForChords.match(labelRegex);
         if (labelMatch) {
             label = labelMatch[0].trim();

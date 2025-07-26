@@ -1,7 +1,7 @@
 import * as Tone from 'tone';
 import type { SequenceItem } from '../types';
 import { getChordNotes } from './chord-utils';
-import { INDEX_TO_SHARP_NAME } from '../constants';
+import { INDEX_TO_SHARP_NAME } from './constants';
 
 let isAudioReady = false;
 
@@ -49,7 +49,7 @@ export class AudioEngine {
             
             await Tone.loaded();
             this.isSamplerReady = true;
-            console.log('Audio engine (Tone.js) sampler ready.');
+            
         } catch (e) {
             console.error("Tone.js sampler failed to initialize:", e);
         } finally {

@@ -11,9 +11,7 @@ import { transposeNote, formatChordName } from './chord-utils';
 interface SheetManagerConfig {
     container: HTMLElement;
     audioEngine: AudioEngine;
-    showInspector: ShowInspectorFn; // <-- CORRECCIÓN: 'ShowinspectorFn' a 'ShowInspectorFn'
-    getSong: () => ProcessedSong | null;
-    getTransposition: () => number;
+    showInspector: ShowInspectorFn;
     updateChord: (updatedItem: SequenceItem) => void;
     deleteChord: (itemToDelete: SequenceItem) => void;
     onChordClick?: (item: SequenceItem) => void;
@@ -30,10 +28,7 @@ export class SheetManager {
     }
 
     /** Dibuja o actualiza la partitura en el contenedor HTML. */
-    public render(): void {
-        const song = this.config.getSong();
-        const transposition = this.config.getTransposition();
-        
+    public render(song: ProcessedSong | null, transposition: number): void {
         this.config.container.innerHTML = '';
         if (!song || song.lines.length === 0) {
             this.config.container.innerHTML = `<div class="song-line"><div class="lyrics-layer" style="min-height: 2em;">Carga o importa una canción para empezar.</div></div>`;
@@ -45,22 +40,20 @@ export class SheetManager {
         });
 
         createSongSheet(this.config.container, song.lines, {
-            onShortClick: this.onShortClick,
-            onLongClick: this.onLongClick,
+            onShortClick: (item) => this.onShortClick(item, transposition),
+            onLongClick: (item) => this.onLongClick(item, transposition),
             transposition: transposition,
         });
     }
 
     /** Maneja el clic corto en un acorde (reproducir sonido). */
-    private onShortClick = (item: SequenceItem): void => {
-        this.config.audioEngine.playChord(item, this.config.getTransposition());
+    private onShortClick = (item: SequenceItem, transposition: number): void => {
+        this.config.audioEngine.playChord(item, transposition);
         this.config.onChordClick?.(item);
     }
 
     /** Maneja el clic largo en un acorde (abrir el editor/inspector). */
-    private onLongClick = (item: SequenceItem): void => {
-        const transposition = this.config.getTransposition();
-        
+    private onLongClick = (item: SequenceItem, transposition: number): void => {
         this.config.onChordClick?.(item);
 
         const itemForInspector = JSON.parse(JSON.stringify(item));
@@ -72,7 +65,6 @@ export class SheetManager {
         }
         
         this.config.showInspector(itemForInspector, {
-            // <-- CORRECCIÓN: Se añade el tipo 'SequenceItem' al parámetro
             onUpdate: (updatedItemFromInspector: SequenceItem) => {
                 const finalChordToSave = JSON.parse(JSON.stringify(updatedItemFromInspector));
                 finalChordToSave.id = item.id;

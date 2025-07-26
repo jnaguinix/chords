@@ -1,72 +1,69 @@
-# Acordes Mágicos ✨
+# React + TypeScript + Vite
 
-Una aplicación web interactiva diseñada para músicos que permite visualizar, extraer y componer con  de acordes de forma sencilla e intuitiva.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## 🎹 Características Principales
+Currently, two official plugins are available:
 
-El proyecto se divide en tres modos principales, cada uno con un propósito específico:
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-### 1. Visualizador de Acordes
-- **Visualización Instantánea:** Selecciona una nota raíz, un tipo de acorde, una inversión y un bajo para ver instantáneamente las notas correspondientes en un piano virtual.
-- **Soporte para Alteraciones:** Añade alteraciones complejas (como `b9`, `#11`, etc.) y observa cómo afectan al acorde.
-- **Reproducción de Audio:** Escucha cómo suena cualquier acorde que construyas gracias a la integración con **Tone.js**.
+## Expanding the ESLint configuration
 
-### 2. Extractor de Canciones
-- **Análisis Inteligente:** Pega la letra de una canción con sus acordes y la aplicación la analizará para generar una partitura interactiva.
-- **Partitura Interactiva:** Haz clic en cualquier acorde de la partitura generada para escucharlo y ver su diagrama en el piano.
-- **Transposición Fácil:** Transporta la tonalidad de toda la canción hacia arriba o hacia abajo con un solo clic.
-- **Integración con el Compositor:** Envía la canción procesada directamente al modo Compositor para empezar a editarla.
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-### 3. Compositor de Partituras
-- **Edición Completa:** Modifica cualquier acorde de la canción a través de un inspector modal avanzado. Cambia la nota raíz, el tipo, el bajo, las alteraciones y las inversiones.
-- **Notación Profesional:** Los acordes se muestran utilizando una notación clara y estándar (ej. `Cmaj7(#11)`), evitando ambigüedades.
-- **Inserción y Eliminación:** Añade nuevos acordes en cualquier punto de la letra o elimina los existentes.
-- **Piano de Contexto:** Un pequeño piano en la parte superior siempre muestra el último acorde que has seleccionado.
-- **Importación y Exportación:** Guarda tus composiciones en un archivo `.chordsong` (formato JSON) y vuelve a cargarlas más tarde para seguir trabajando.
+```js
+export default tseslint.config([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-## 🛠️ Pila Tecnológica (Tech Stack)
+      // Remove tseslint.configs.recommended and replace with this
+      ...tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      ...tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      ...tseslint.configs.stylisticTypeChecked,
 
-- **Frontend:** TypeScript
-- **Bundler:** Vite
-- **Motor de Audio:** Tone.js
-- **Estilos:** CSS plano (con variables para un sistema de diseño cohesivo)
-- **Sin Frameworks:** El proyecto está construido con TypeScript puro para un control máximo del DOM y la lógica de estado.
-
-## 📂 Estructura del Proyecto
-
-El código fuente está organizado de forma modular para facilitar su mantenimiento y escalabilidad:
-
-```
-src/
-├── core/         # Lógica de negocio principal y reutilizable
-│   ├── audio.ts              # Motor de audio (wrapper de Tone.js)
-│   ├── chord-utils.ts        # Funciones para parsear, formatear y manipular acordes
-│   ├── piano-renderer.ts     # Lógica para dibujar el piano en el DOM
-│   ├── sheet-manager.ts      # Gestiona el renderizado y la interacción de las partituras
-│   └── transposition-manager.ts # Gestiona el estado y la lógica de la transposición
-│
-├── modes/        # Lógica específica para cada uno de los tres modos de la aplicación
-│   ├── composer.ts           # Modo de composición
-│   ├── extractor.ts          # Modo de extracción de canciones
-│   └── visualizer.ts         # Modo de visualización de acordes
-│
-├── main.tsx      # Punto de entrada principal, inicialización de la app y gestión del modal
-├── types.ts      # Definiciones de tipos e interfaces de TypeScript
-└── index.css     # Estilos globales de la aplicación
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 ```
 
-## 🚀 Cómo Empezar
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-1.  Clona el repositorio:
-    ```bash
-    git clone https://github.com/tu-usuario/tu-repositorio.git
-    ```
-2.  Instala las dependencias:
-    ```bash
-    npm install
-    ```
-3.  Inicia el servidor de desarrollo:
-    ```bash
-    npm run dev
-    ```
-4.  Abre tu navegador en `http://localhost:5173` (o el puerto que indique Vite).
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default tseslint.config([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```

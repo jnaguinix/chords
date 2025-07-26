@@ -6,11 +6,11 @@
 */
 
 import type { ProcessedSong, SequenceItem, SongChord, ShowInspectorFn } from '../types';
-import { formatChordName, getChordNotes, calculateOptimalPianoRange } from '../core/chord-utils';
-import { createPiano } from '../core/piano-renderer';
-import type { AudioEngine } from '../core/audio';
-import { TranspositionManager } from '../core/transposition-manager';
-import { SheetManager } from '../core/sheet-manager';
+import { formatChordName, getChordNotes, calculateOptimalPianoRange } from '../utils/chord-utils';
+import { createPiano } from '../utils/piano-renderer';
+import type { AudioEngine } from '../utils/audio';
+import { TranspositionManager } from '../utils/transposition-manager';
+import { SheetManager } from '../utils/sheet-manager';
 
 interface ComposerDOMElements {
     compositionOutput: HTMLElement;

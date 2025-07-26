@@ -1,6 +1,0 @@
-{
-  "name": "Extractor de Acordes y Visualizador",
-  "description": "Analiza canciones desde texto, extrae sus acordes de forma local e instantánea, y visualízalos en un piano y compositor interactivo.",
-  "requestFramePermissions": [],
-  "prompt": ""
-}
