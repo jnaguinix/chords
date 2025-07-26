@@ -255,23 +255,31 @@ select {
 #piano-container {
     display: flex;
     justify-content: center;
+    width: 100%; /* Asegura que el contenedor ocupe todo el ancho disponible */
+    overflow-x: auto; /* Permite el scroll horizontal si el piano es demasiado grande */
+    -webkit-overflow-scrolling: touch; /* Mejora el scroll en iOS */
+    padding-bottom: 10px; /* Espacio para la barra de scroll si aparece */
 }
 
 .piano {
     position: relative;
     display: flex;
-    margin: 20px 0; /* Reducido el margen superior e inferior */
-    width: fit-content;
-    padding: 12px; /* Más padding */
+    margin: 20px 0;
+    padding: 12px;
     background: #1e1e1e;
-    border-radius: 12px; /* Más redondeado */
-    box-shadow: var(--shadow); /* Usar la nueva sombra */
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    flex-shrink: 0; /* Evita que el piano se encoja más allá de su contenido */
+    min-width: fit-content; /* Asegura que el piano no se encoja más de lo necesario */
 }
 
 .piano .key {
     cursor: pointer;
     position: relative;
-    flex-shrink: 0;
+    flex-shrink: 1; /* Permite que las teclas se encojan */
+    flex-grow: 1; /* Permite que las teclas crezcan */
+    min-width: 30px; /* Ancho mínimo para las teclas blancas */
+    max-width: 60px; /* Ancho máximo para las teclas blancas */
 }
 
 .piano .note-name {
@@ -281,15 +289,15 @@ select {
     left: 0;
     width: 100%;
     text-align: center;
-    font-size: 1.1rem;
+    font-size: clamp(0.8rem, 2vw, 1.1rem); /* Tamaño de fuente responsivo */
     font-weight: 500;
     color: #444;
     pointer-events: none;
 }
 
 .piano .white {
-    width: 45px;
-    height: 200px;
+    height: 200px; /* Altura base, se puede ajustar con media queries */
+    aspect-ratio: 45 / 200; /* Mantiene la proporción original de la tecla */
     background: linear-gradient(to bottom, #f9f9f9, #e0e0e0);
     border: 1px solid #a0a0a0;
     border-left: none;
@@ -326,8 +334,8 @@ select {
 .piano .black {
     position: absolute;
     top: -1px;
-    width: 26px;
-    height: 120px;
+    width: 60%; /* Ancho relativo a la tecla blanca */
+    height: 60%; /* Altura relativa a la tecla blanca */
     background: linear-gradient(to bottom, #3a3a3a, #111);
     border: 1px solid #000;
     border-radius: 0 0 5px 5px;
@@ -336,7 +344,7 @@ select {
 }
 
 .piano .white .black {
-    left: calc(45px - (26px / 2));
+    left: calc(100% - (var(--black-key-width, 60%) / 2)); /* Posicionamiento relativo */
 }
 
 .piano .black.pressed {
@@ -347,6 +355,25 @@ select {
 .piano .black.bass-note {
     background: var(--accent-orange);
     box-shadow: 0 0 20px 2px var(--accent-orange);
+}
+
+/* Media query para pantallas más pequeñas, ajusta la altura base de las teclas */
+@media (max-width: 768px) {
+    .piano .white {
+        height: 150px; /* Menor altura para pantallas pequeñas */
+    }
+    .piano .black {
+        height: 90px; /* Ajusta la altura de las teclas negras */
+    }
+}
+
+@media (max-width: 480px) {
+    .piano .white {
+        height: 120px; /* Aún menor altura para móviles */
+    }
+    .piano .black {
+        height: 72px; /* Ajusta la altura de las teclas negras */
+    }
 }
 
 /* ============================================ */
