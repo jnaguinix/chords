@@ -46,42 +46,45 @@ const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspecto
     }
 
     if (songOutputRef.current && !sheetManagerRef.current) {
-      sheetManagerRef.current = new SheetManager({
-        container: songOutputRef.current,
-        audioEngine: audioEngine,
-        showInspector: showInspector,
-        updateChord: (updatedItem: SequenceItem) => {
-          const currentSong = processedSongRef.current; // Use ref for latest value
-          if (!currentSong || updatedItem.id === undefined) return;
-          const newProcessedSong = { ...currentSong };
-          let found = false;
-          for (const line of newProcessedSong.lines) {
-            for (const songChord of line.chords) {
-              if (songChord.chord.id === updatedItem.id) {
-                songChord.chord = updatedItem;
-                found = true;
-                break;
-              }
+    sheetManagerRef.current = new SheetManager({
+      container: songOutputRef.current,
+      audioEngine: audioEngine,
+      showInspector: showInspector,
+      updateChord: (updatedItem: SequenceItem) => {
+        const currentSong = processedSongRef.current;
+        if (!currentSong || updatedItem.id === undefined) return;
+        const newProcessedSong = { ...currentSong };
+        let found = false;
+        for (const line of newProcessedSong.lines) {
+          for (const songChord of line.chords) {
+            if (songChord.chord.id === updatedItem.id) {
+              songChord.chord = updatedItem;
+              found = true;
+              break;
             }
-            if (found) break;
           }
-          const index = newProcessedSong.allChords.findIndex(c => c.id === updatedItem.id);
-          if (index > -1) {
-            newProcessedSong.allChords[index] = updatedItem;
-          }
-          setProcessedSong(newProcessedSong);
-        },
-        deleteChord: (itemToDelete: SequenceItem) => {
-          const currentSong = processedSongRef.current; // Use ref for latest value
-          if (!currentSong || itemToDelete.id === undefined) return;
-          const newProcessedSong = { ...currentSong };
-          newProcessedSong.allChords = newProcessedSong.allChords.filter(c => c.id !== itemToDelete.id);
-          newProcessedSong.lines.forEach(line => {
-            line.chords = line.chords.filter(sc => sc.chord.id !== itemToDelete.id);
-          });
-          setProcessedSong(newProcessedSong);
-        },
-      });
+          if (found) break;
+        }
+        const index = newProcessedSong.allChords.findIndex(c => c.id === updatedItem.id);
+        if (index > -1) {
+          newProcessedSong.allChords[index] = updatedItem;
+        }
+        setProcessedSong(newProcessedSong);
+      },
+      deleteChord: (itemToDelete: SequenceItem) => {
+        const currentSong = processedSongRef.current;
+        if (!currentSong || itemToDelete.id === undefined) return;
+        const newProcessedSong = { ...currentSong };
+        newProcessedSong.allChords = newProcessedSong.allChords.filter(c => c.id !== itemToDelete.id);
+        newProcessedSong.lines.forEach(line => {
+          line.chords = line.chords.filter(sc => sc.chord.id !== itemToDelete.id);
+        });
+        setProcessedSong(newProcessedSong);
+      },
+      getTransposition: () => transpositionOffsetRef.current,
+      getSong: () => processedSongRef.current
+    });
+
     }
   }, [audioEngine, showInspector]); // Empty dependency array for one-time initialization
 

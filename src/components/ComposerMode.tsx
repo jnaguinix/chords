@@ -278,14 +278,17 @@ const ComposerMode: React.FC<ComposerModeProps> = ({ audioEngine, showInspector,
     }
 
     if (compositionOutputRef.current && !sheetManagerRef.current) {
-      sheetManagerRef.current = new SheetManager({
-        container: compositionOutputRef.current,
-        audioEngine: audioEngine,
-        showInspector: showInspector,
-        updateChord: updateChordInSong,
-        deleteChord: handleDeleteChord,
-        onChordClick: updateDisplayPiano,
-      });
+    sheetManagerRef.current = new SheetManager({
+      container: compositionOutputRef.current,
+      audioEngine: audioEngine,
+      showInspector: showInspector,
+      updateChord: updateChordInSong,
+      deleteChord: handleDeleteChord,
+      onChordClick: updateDisplayPiano,
+      getTransposition: () => transpositionOffsetRef.current,
+      getSong: () => currentSongRef.current
+    });
+
     }
   }, [audioEngine, showInspector, updateDisplayPiano]);
 
