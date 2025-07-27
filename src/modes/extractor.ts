@@ -53,7 +53,7 @@ export class Extractor {
         this.transpositionManager = new TranspositionManager(
             this.elements.transpositionDisplay,
             () => this.sheetManager.render() 
-        );
+        ); // Expected 2 arguments, but got 0.
 
         this.sheetManager = new SheetManager({
             container: this.elements.songOutput,

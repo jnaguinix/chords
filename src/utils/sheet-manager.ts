@@ -15,6 +15,8 @@ interface SheetManagerConfig {
     updateChord: (updatedItem: SequenceItem) => void;
     deleteChord: (itemToDelete: SequenceItem) => void;
     onChordClick?: (item: SequenceItem) => void;
+    getTransposition: () => number;
+    getSong: () => ProcessedSong | null;
 }
 
 /**
@@ -33,21 +35,23 @@ export class SheetManager {
     }
 
     /** Dibuja o actualiza la partitura en el contenedor HTML. */
-    public render(song: ProcessedSong | null, transposition: number): void {
+    public render(song?: ProcessedSong | null, transposition?: number): void {
+        const songToRender = song !== undefined ? song : this.config.getSong();
+        const transpositionToApply = transposition !== undefined ? transposition : this.config.getTransposition();
         this.config.container.innerHTML = '';
-        if (!song || song.lines.length === 0) {
+        if (!songToRender || songToRender.lines.length === 0) {
             this.config.container.innerHTML = `<div class="song-line"><div class="lyrics-layer" style="min-height: 2em;">Carga o importa una canción para empezar.</div></div>`;
             return;
         }
 
-        song.allChords.forEach(chord => {
-            chord.raw = formatChordName(chord, { style: 'short' }, transposition);
+        songToRender.allChords.forEach(chord => {
+            chord.raw = formatChordName(chord, { style: 'short' }, transpositionToApply);
         });
 
-        createSongSheet(this.config.container, song.lines, {
-            onShortClick: (item) => this.onShortClick(item, transposition),
-            onLongClick: (item) => this.onLongClick(item, transposition),
-            transposition: transposition,
+        createSongSheet(this.config.container, songToRender.lines, {
+            onShortClick: (item) => this.onShortClick(item, transpositionToApply),
+            onLongClick: (item) => this.onLongClick(item, transpositionToApply),
+            transposition: transpositionToApply,
         });
     }
 

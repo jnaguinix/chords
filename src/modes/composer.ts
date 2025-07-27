@@ -37,7 +37,7 @@ export class Composer {
     private transpositionManager: TranspositionManager;
     private sheetManager: SheetManager;
 
-    constructor(
+    constructor( 
         elements: ComposerDOMElements, 
         showInspector: ShowInspectorFn,
         audioEngine: AudioEngine
@@ -48,7 +48,7 @@ export class Composer {
         
         this.transpositionManager = new TranspositionManager(
             this.elements.transpositionDisplay,
-            () => this.sheetManager.render()
+            () => this.sheetManager.render(this.currentSong, this.transpositionManager.getOffset()),
         );
 
         // ANOTACIÓN: La clave está aquí. El composer no crea su propio editor.
@@ -59,17 +59,17 @@ export class Composer {
             container: this.elements.compositionOutput,
             audioEngine: this.audioEngine,
             showInspector: this.showInspector, // <- Uso de la función central
-            getSong: () => this.currentSong,
             getTransposition: () => this.transpositionManager.getOffset(),
             updateChord: this.updateChordInSong,
             deleteChord: this.handleDeleteChord,
             onChordClick: this.updateDisplayPiano,
+            getSong: () => this.currentSong, // ✅ aquí está la corrección
         });
     }
 
     public init(): void {
         this.addEventListeners();
-        this.sheetManager.render();
+        this.sheetManager.render(this.currentSong, this.transpositionManager.getOffset());
     }
 
     public setSong(song: ProcessedSong): void {
@@ -77,7 +77,7 @@ export class Composer {
         const maxId = Math.max(0, ...song.allChords.map(c => c.id || 0));
         this.nextChordId = maxId + 1;
         this.transpositionManager.reset(); 
-        this.sheetManager.render();
+        this.sheetManager.render(this.currentSong, this.transpositionManager.getOffset());
     }
     
     private addEventListeners(): void {
@@ -182,7 +182,7 @@ export class Composer {
         if (!this.currentSong) {
             this.currentSong = { lines: [{ lyrics: '', chords: [], isInstrumental: false }], allChords: [] };
             this.nextChordId = 1;
-            this.sheetManager.render();
+ this.sheetManager.render(this.currentSong, this.transpositionManager.getOffset());
         }
         
         const songLineEl = lyricsEl.closest<HTMLElement>('.song-line')!;
@@ -209,7 +209,7 @@ export class Composer {
                 } else {
                     this.updateChordInSong(chordBeingBuilt); 
                 }
-                this.sheetManager.render();
+                this.sheetManager.render(this.currentSong, this.transpositionManager.getOffset());
             },
             onInsert: (chordToInsert) => {
                 if (this.currentInsertingChordId === null) {
@@ -217,7 +217,7 @@ export class Composer {
                     chordToInsert.id = this.currentInsertingChordId;
                     this.addChordToSongData(chordToInsert, capturedInsertionTarget);
                 }
-                this.sheetManager.render(); 
+                this.sheetManager.render(this.currentSong, this.transpositionManager.getOffset());
                 this.handleMouseLeave(); 
                 this.currentInsertingChordId = null; 
             },
@@ -262,8 +262,8 @@ export class Composer {
         if (chordIndex !== -1) {
             this.currentSong.allChords[chordIndex] = updatedItem;
         }
-        
-        this.sheetManager.render();
+
+        this.sheetManager.render(this.currentSong, this.transpositionManager.getOffset());
     }
 
     private handleDeleteChord = (itemToDelete: SequenceItem): void => {
@@ -272,6 +272,6 @@ export class Composer {
         this.currentSong.lines.forEach(line => {
             line.chords = line.chords.filter(sc => sc.chord.id !== itemToDelete.id);
         });
-        this.sheetManager.render();
+        this.sheetManager.render(this.currentSong, this.transpositionManager.getOffset());
     }
 }
