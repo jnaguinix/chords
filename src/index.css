@@ -129,13 +129,34 @@ select.selector-box {
 /* ESTILOS DE LA PARTITURA (Song Sheet)         */
 /* ============================================ */
 .song-sheet-container { @apply text-left; }
+
+/* AQUÍ ESTÁ LA MAGIA:
+  1. Hacemos la letra base de toda la línea más grande. 
+     Esta será la "regla" que usan los acordes para posicionarse.
+     Puedes cambiar este valor (ej. 1.25rem, 1.75rem) para ajustar el tamaño.
+*/
 .song-line {
   @apply relative pt-4 mb-3 w-max min-w-full;
+  font-size: 1.7rem; /* <-- LETRA GRANDE */
 }
-.lyrics-layer { @apply text-[#ccc] whitespace-pre cursor-text leading-normal text-lg; } /* <-- AÑADIDO: text-lg */
+
+/* 2. La letra de la canción simplemente hereda el tamaño grande de su padre.
+*/
+.lyrics-layer { 
+  @apply text-[#ccc] whitespace-pre cursor-text leading-normal;
+}
+
 .chords-layer { @apply absolute top-0 left-0 h-6 pointer-events-none; }
 .chord-positioner { @apply absolute top-0 pointer-events-auto; }
-.chord-visual { @apply inline-block cursor-pointer text-[#6cb2f7] font-bold select-none whitespace-nowrap leading-none p-1 rounded transition-colors; }
+
+/* 3. Le devolvemos al texto del acorde su tamaño original (más pequeño).
+     Esto no afecta su posición porque la "regla" ya fue definida por .song-line
+*/
+.chord-visual { 
+  @apply inline-block cursor-pointer text-[#6cb2f7] font-bold select-none whitespace-nowrap leading-none p-1 rounded transition-colors;
+  font-size: 1rem; /* <-- LETRA PEQUEÑA */
+}
+
 .chord-visual:hover { @apply bg-white/10; }
 
 /* ============================================ */

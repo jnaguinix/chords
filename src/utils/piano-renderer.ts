@@ -5,14 +5,12 @@
 ================================================================================
 */
 
-// ANOTACIÓN: Se importan las nuevas dependencias necesarias.
 import { CHORD_DISPLAY_LIST, IS_BLACK_KEY, INDEX_TO_SHARP_NAME, INDEX_TO_FLAT_NAME, NOTE_TO_INDEX } from './constants';
 import { formatChordName } from './chord-utils';
 import type { SongLine, SequenceItem, SongChord } from '../types';
 
 /**
  * Rellena un <select> con opciones de notas musicales.
- * (Esta función no necesita cambios, su lógica es sólida).
  */
 export function populateNoteSelector(
     selectElement: HTMLSelectElement,
@@ -53,9 +51,7 @@ export function populateNoteSelector(
     });
 }
 
-// =============================================
-// ========= FUNCIÓN CLAVE MODIFICADA ==========
-// =============================================
+
 /**
  * Rellena un <select> con los nombres de acordes completos, basados en una nota raíz.
  * @param selectElement El elemento <select> a rellenar.
@@ -75,31 +71,23 @@ export function populateChordTypeSelector(
         if (chordInfo.isSeparator) {
             option.textContent = chordInfo.text;
             option.disabled = true;
-            option.classList.add('chord-category-separator'); // Opcional: para estilos CSS
-            option.value = ''; // Asegura que no tenga un valor seleccionable
+            option.classList.add('chord-category-separator');
+            option.value = ''; 
         } else {
-            // El 'value' sigue siendo el nombre interno del TIPO (ej. "Mayor 7 (maj7)")
-            // Esto es crucial para que el resto de tu lógica no se rompa.
             option.value = chordInfo.value; 
-
-            // Creamos un acorde temporal para obtener su nombre formateado.
             const tempItem: SequenceItem = { rootNote: rootNote, type: chordInfo.value };
-            
-            // El 'textContent' es el nombre completo que ve el usuario (ej. "Cmaj7").
             option.textContent = formatChordName(tempItem, { style: 'short' }); 
         }
         
         selectElement.appendChild(option);
     });
 
-    // Selecciona el valor por defecto.
     selectElement.value = defaultValue;
 }
 
 
 /**
  * Dibuja el piano en el DOM.
- * (Esta función no necesita cambios).
  */
 export function createPiano(
     container: HTMLElement, 
@@ -162,7 +150,6 @@ export function createPiano(
     container.appendChild(pianoEl);
 }
 
-// createSongSheet no necesita cambios.
 interface SongSheetCallbacks {
     onShortClick: (item: SequenceItem) => void;
     onLongClick: (item: SequenceItem) => void;
@@ -179,14 +166,14 @@ export function createSongSheet(
 
     lines.forEach((line, lineIndex) => {
         const lineEl = document.createElement('div');
-        lineEl.className = 'song-line';
+        lineEl.className = 'song-line text-2xl'; // <-- La 'regla' grande para la alineación
         lineEl.dataset.lineIndex = lineIndex.toString();
 
         const chordsLayer = document.createElement('div');
         chordsLayer.className = 'chords-layer';
 
         const lyricsLayer = document.createElement('div');
-        lyricsLayer.className = 'lyrics-layer';
+        lyricsLayer.className = 'lyrics-layer'; // <-- Hereda el tamaño grande de 'song-line'
         lyricsLayer.textContent = line.lyrics || '\u00A0';
 
         line.chords.forEach((songChord: SongChord) => {
@@ -199,7 +186,10 @@ export function createSongSheet(
             positionerEl.style.left = `${position}ch`;
 
             const visualEl = document.createElement('span');
-            visualEl.className = 'chord-visual';
+            // ==================================================================
+            // AQUÍ ESTÁ LA MAGIA: Hacemos que el texto del acorde vuelva a su tamaño normal
+            visualEl.className = 'chord-visual text-base'; 
+            // ==================================================================
             visualEl.textContent = formatChordName(chord, { style: 'short' }, callbacks.transposition);
             
             if (isAnnotation) {
