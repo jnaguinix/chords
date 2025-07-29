@@ -14,7 +14,7 @@ interface ChordInspectorModalProps {
   onSave: (item: SequenceItem) => void;
   onInsert: (item: SequenceItem) => void;
   onDelete: (item: SequenceItem) => void;
-  audioEngine: AudioEngine; // Pass AudioEngine as a prop
+  audioEngine: AudioEngine;
 }
 
 const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, onClose, item, onSave, onInsert, onDelete, audioEngine }) => {
@@ -28,7 +28,6 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
   const modificationsEditorRef = useRef<HTMLDivElement>(null);
   const chordInspectorPianoRef = useRef<HTMLDivElement>(null);
 
-  // Initialize editedItem when item prop changes
   useEffect(() => {
     if (item) {
       setEditedItem(JSON.parse(JSON.stringify(item)));
@@ -39,7 +38,6 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
     }
   }, [item]);
 
-  // Populate selectors and render piano/modifications editor when editedItem changes
   useEffect(() => {
     if (!editedItem) return;
 
@@ -58,7 +56,6 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
       chordTypeSelectRef.current.value = editedItem.type;
     }
 
-    // Update inversion select
     if (inversionSelectRef.current) {
       const selectedType = editedItem.type;
       const intervals = MUSICAL_INTERVALS[selectedType];
@@ -75,13 +72,12 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
           inversionSelectRef.current.appendChild(option);
         }
         if (currentInversion >= numNotes) {
-          currentInversion = 0; // Reset to fundamental if invalid
+          currentInversion = 0;
         }
         inversionSelectRef.current.value = currentInversion.toString();
       }
     }
 
-    // Render piano
     if (chordInspectorPianoRef.current) {
       const { notesToPress, bassNoteIndex, allNotesForRange } = getChordNotes(editedItem);
       if (allNotesForRange.length > 0) {
@@ -92,17 +88,15 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
       }
     }
 
-    // Populate Modifications Editor
     if (modificationsEditorRef.current) {
       modificationsEditorRef.current.innerHTML = '';
       EDITABLE_ALTERATIONS.forEach(alt => {
         const button = document.createElement('button');
         button.className = 'mod-button';
-        button.textContent = alt;
-        button.dataset.alt = alt;
         if (editedItem.alterations?.includes(alt)) {
-          button.classList.add('selected');
+          button.classList.add('active');
         }
+        button.textContent = alt;
         button.onclick = () => {
           setEditedItem(prevItem => {
             if (!prevItem) return null;
@@ -122,102 +116,55 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
 
   }, [editedItem]);
 
-  const handleRootNoteChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setEditedItem(prevItem => {
-      if (!prevItem) return null;
-      const newRootNote = e.target.value;
-      // Reset type and alterations if root note changes
-      return { ...prevItem, rootNote: newRootNote, type: 'Mayor', alterations: [], inversion: 0 };
-    });
-  }, []);
+  const handleRootNoteChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => setEditedItem(p => p ? { ...p, rootNote: e.target.value, type: 'Mayor', alterations: [], inversion: 0 } : null), []);
+  const handleChordTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => setEditedItem(p => p ? { ...p, type: e.target.value, alterations: [], inversion: 0 } : null), []);
+  const handleBassNoteChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => setEditedItem(p => p ? { ...p, bassNote: e.target.value === 'none' ? undefined : e.target.value } : null), []);
+  const handleInversionChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => setEditedItem(p => p ? { ...p, inversion: parseInt(e.target.value, 10) } : null), []);
+  const handlePlayChord = useCallback(() => { if (editedItem) audioEngine.playChord(editedItem); }, [editedItem, audioEngine]);
+  const handleSave = useCallback(() => { if (editedItem) onSave(editedItem); }, [editedItem, onSave]);
+  const handleInsert = useCallback(() => { if (editedItem) onInsert(editedItem); }, [editedItem, onInsert]);
+  const handleDelete = useCallback(() => { if (editedItem) onDelete(editedItem); }, [editedItem, onDelete]);
 
-  const handleChordTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setEditedItem(prevItem => {
-      if (!prevItem) return null;
-      // Reset alterations and inversion if chord type changes
-      return { ...prevItem, type: e.target.value, alterations: [], inversion: 0 };
-    });
-  }, []);
-
-  const handleBassNoteChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setEditedItem(prevItem => {
-      if (!prevItem) return null;
-      return { ...prevItem, bassNote: e.target.value === 'none' ? undefined : e.target.value };
-    });
-  }, []);
-
-  const handleInversionChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setEditedItem(prevItem => {
-      if (!prevItem) return null;
-      return { ...prevItem, inversion: parseInt(e.target.value, 10) };
-    });
-  }, []);
-
-  const handlePlayChord = useCallback(() => {
-    if (editedItem) {
-      audioEngine.playChord(editedItem);
-    }
-  }, [editedItem, audioEngine]);
-
-  const handleSave = useCallback(() => {
-    if (editedItem) {
-      onSave(editedItem);
-    }
-  }, [editedItem, onSave]);
-
-  const handleInsert = useCallback(() => {
-    if (editedItem) {
-      onInsert(editedItem);
-    }
-  }, [editedItem, onInsert]);
-
-  const handleDelete = useCallback(() => {
-    if (editedItem) {
-      onDelete(editedItem);
-    }
-  }, [editedItem, onDelete]);
-
-  if (!editedItem) return null; // Don't render if no item is provided
+  if (!editedItem) return null;
 
   return (
     <>
-      <div id="chord-inspector-overlay" className={isVisible ? 'visible' : ''} onClick={onClose}></div>
-      <div id="chord-inspector-modal" className={isVisible ? 'visible' : ''}>
+      <div className={`chord-inspector-overlay ${isVisible ? 'visible' : ''}`} onClick={onClose}></div>
+      <div className={`chord-inspector-modal ${isVisible ? 'visible' : ''}`}>
         <div className="inspector-header">
-          <h3 id="chord-inspector-title">{formatChordName(editedItem, { style: 'long' })}</h3>
-          <button id="chord-inspector-play-btn" className="play-btn" onClick={handlePlayChord}>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" fill="currentColor"><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg>
+          <h3 className="text-xl font-medium text-light-main font-fira mr-auto">{formatChordName(editedItem, { style: 'short' })}</h3>
+          <button className="play-btn-modal" onClick={handlePlayChord}>
+            <svg className="w-4 h-4 ml-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" fill="currentColor"><path d="M73 39c-14.8-9.1-33.4-9.4-48.5-.9S0 62.6 0 80V432c0 17.4 9.4 33.4 24.5 41.9s33.7 8.1 48.5-.9L361 297c14.3-8.7 23-24.2 23-41s-8.7-32.2-23-41L73 39z"/></svg>
           </button>
-          <div className="inspector-actions">
-            {!isNewChord && <button id="chord-inspector-save-btn" className="button-primary" onClick={handleSave}>Guardar</button>}
-            {isNewChord && <button id="chord-inspector-insert-btn" className="button-primary" onClick={handleInsert}>Insertar</button>}
-            {!isNewChord && <button id="chord-inspector-delete-btn" className="button-secondary" onClick={handleDelete}>Eliminar</button>}
+          <div className="flex gap-2.5">
+            {!isNewChord && <button className="btn-primary-modal" onClick={handleSave}>Guardar</button>}
+            {isNewChord && <button className="btn-primary-modal" onClick={handleInsert}>Insertar</button>}
+            {!isNewChord && <button className="btn-delete-modal" onClick={handleDelete}>Eliminar</button>}
           </div>
-          <button id="chord-inspector-close-btn" onClick={onClose}>×</button>
+          <button className="btn-close-modal" onClick={onClose}>×</button>
         </div>
 
-        <div className="inspector-controls">
-          <div className="select-wrapper">
-            <label htmlFor="chord-inspector-root-note-select">Nota Raíz</label>
-            <select id="chord-inspector-root-note-select" ref={rootNoteSelectRef} onChange={handleRootNoteChange}></select>
+        <div className="grid grid-cols-2 gap-5 mb-6">
+          <div className="selector">
+            <label className="selector-label">Nota Raíz</label>
+            <select className="selector-box w-full" ref={rootNoteSelectRef} onChange={handleRootNoteChange}></select>
           </div>
-          <div className="select-wrapper">
-            <label htmlFor="chord-inspector-type-select">Tipo de Acorde</label>
-            <select id="chord-inspector-type-select" ref={chordTypeSelectRef} onChange={handleChordTypeChange}></select>
+          <div className="selector">
+            <label className="selector-label">Tipo de Acorde</label>
+            <select className="selector-box w-full" ref={chordTypeSelectRef} onChange={handleChordTypeChange}></select>
           </div>
-          <div className="select-wrapper">
-            <label htmlFor="chord-inspector-bass-note-select">Bajo en (Opcional)</label>
-            <select id="chord-inspector-bass-note-select" ref={bassNoteSelectRef} onChange={handleBassNoteChange}></select>
+          <div className="selector">
+            <label className="selector-label">Bajo en (Opcional)</label>
+            <select className="selector-box w-full" ref={bassNoteSelectRef} onChange={handleBassNoteChange}></select>
           </div>
-          <div className="select-wrapper">
-            <label htmlFor="chord-inspector-inversion-select">Inversión</label>
-            <select id="chord-inspector-inversion-select" ref={inversionSelectRef} onChange={handleInversionChange}></select>
+          <div className="selector">
+            <label className="selector-label">Inversión</label>
+            <select className="selector-box w-full" ref={inversionSelectRef} onChange={handleInversionChange}></select>
           </div>
         </div>
         
-        <div id="chord-inspector-modifications-editor" className="modifications-container" ref={modificationsEditorRef}></div>
-        
-        <div id="chord-inspector-piano" ref={chordInspectorPianoRef}></div>
+        <div ref={modificationsEditorRef} className="alteraciones mb-5"></div>
+        <div ref={chordInspectorPianoRef} className="flex justify-center inspector-piano-container"></div>
       </div>
     </>
   );

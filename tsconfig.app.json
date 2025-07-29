@@ -26,5 +26,4 @@
     "outDir": "dist"
   },
   "include": ["src"],
-  "exclude": ["../src", "src/modes/composer.ts", "src/modes/extractor.ts", "src/modes/visualizer.ts"]
 }

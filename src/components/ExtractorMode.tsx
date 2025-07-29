@@ -9,7 +9,7 @@ interface ExtractorModeProps {
   audioEngine: AudioEngine;
   showInspector: ShowInspectorFn;
   addToComposer: (song: ProcessedSong) => void;
-  isActive: boolean; // Nueva prop
+  isActive: boolean;
 }
 
 const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspector, addToComposer, isActive }) => {
@@ -19,7 +19,7 @@ const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspecto
   const [transpositionOffset, setTranspositionOffset] = useState<number>(0);
 
   const songOutputRef = useRef<HTMLDivElement>(null);
-  const transpositionDisplayRef = useRef<HTMLSpanElement>(null);
+  const transpositionDisplayRef = useRef<HTMLDivElement>(null); 
 
   const transpositionManagerRef = useRef<TranspositionManager | null>(null);
   const sheetManagerRef = useRef<SheetManager | null>(null);
@@ -27,7 +27,6 @@ const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspecto
   const processedSongRef = useRef<ProcessedSong | null>(null);
   const transpositionOffsetRef = useRef<number>(0);
 
-  // Update refs whenever state changes
   useEffect(() => {
     processedSongRef.current = processedSong;
   }, [processedSong]);
@@ -36,59 +35,58 @@ const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspecto
     transpositionOffsetRef.current = transpositionOffset;
   }, [transpositionOffset]);
 
-  // Initialize TranspositionManager and SheetManager once
   useEffect(() => {
+    // CORRECCIÓN #1: Añadimos `processedSong` a las dependencias.
+    // Esto asegura que este código se ejecute de nuevo cuando la canción aparece o desaparece,
+    // permitiendo que `transpositionManager` se cree en el momento correcto.
     if (transpositionDisplayRef.current && !transpositionManagerRef.current) {
       transpositionManagerRef.current = new TranspositionManager(
         transpositionDisplayRef.current,
-        () => sheetManagerRef.current?.render(processedSongRef.current, transpositionOffsetRef.current) // Use refs for latest values
+        () => sheetManagerRef.current?.render(processedSongRef.current, transpositionOffsetRef.current)
       );
     }
-
     if (songOutputRef.current && !sheetManagerRef.current) {
-    sheetManagerRef.current = new SheetManager({
-      container: songOutputRef.current,
-      audioEngine: audioEngine,
-      showInspector: showInspector,
-      updateChord: (updatedItem: SequenceItem) => {
-        const currentSong = processedSongRef.current;
-        if (!currentSong || updatedItem.id === undefined) return;
-        const newProcessedSong = { ...currentSong };
-        let found = false;
-        for (const line of newProcessedSong.lines) {
-          for (const songChord of line.chords) {
-            if (songChord.chord.id === updatedItem.id) {
-              songChord.chord = updatedItem;
-              found = true;
-              break;
+      sheetManagerRef.current = new SheetManager({
+        container: songOutputRef.current,
+        audioEngine: audioEngine,
+        showInspector: showInspector,
+        updateChord: (updatedItem: SequenceItem) => {
+          const currentSong = processedSongRef.current;
+          if (!currentSong || updatedItem.id === undefined) return;
+          const newProcessedSong = { ...currentSong };
+          let found = false;
+          for (const line of newProcessedSong.lines) {
+            for (const songChord of line.chords) {
+              if (songChord.chord.id === updatedItem.id) {
+                songChord.chord = updatedItem;
+                found = true;
+                break;
+              }
             }
+            if (found) break;
           }
-          if (found) break;
-        }
-        const index = newProcessedSong.allChords.findIndex(c => c.id === updatedItem.id);
-        if (index > -1) {
-          newProcessedSong.allChords[index] = updatedItem;
-        }
-        setProcessedSong(newProcessedSong);
-      },
-      deleteChord: (itemToDelete: SequenceItem) => {
-        const currentSong = processedSongRef.current;
-        if (!currentSong || itemToDelete.id === undefined) return;
-        const newProcessedSong = { ...currentSong };
-        newProcessedSong.allChords = newProcessedSong.allChords.filter(c => c.id !== itemToDelete.id);
-        newProcessedSong.lines.forEach(line => {
-          line.chords = line.chords.filter(sc => sc.chord.id !== itemToDelete.id);
-        });
-        setProcessedSong(newProcessedSong);
-      },
-      getTransposition: () => transpositionOffsetRef.current,
-      getSong: () => processedSongRef.current
-    });
-
+          const index = newProcessedSong.allChords.findIndex(c => c.id === updatedItem.id);
+          if (index > -1) {
+            newProcessedSong.allChords[index] = updatedItem;
+          }
+          setProcessedSong(newProcessedSong);
+        },
+        deleteChord: (itemToDelete: SequenceItem) => {
+          const currentSong = processedSongRef.current;
+          if (!currentSong || itemToDelete.id === undefined) return;
+          const newProcessedSong = { ...currentSong };
+          newProcessedSong.allChords = newProcessedSong.allChords.filter(c => c.id !== itemToDelete.id);
+          newProcessedSong.lines.forEach(line => {
+            line.chords = line.chords.filter(sc => sc.chord.id !== itemToDelete.id);
+          });
+          setProcessedSong(newProcessedSong);
+        },
+        getTransposition: () => transpositionOffsetRef.current,
+        getSong: () => processedSongRef.current
+      });
     }
-  }, [audioEngine, showInspector]); // Empty dependency array for one-time initialization
+  }, [processedSong, audioEngine, showInspector]);
 
-  // Render sheet when processedSong or transpositionOffset changes
   useEffect(() => {
     sheetManagerRef.current?.render(processedSong, transpositionOffset);
   }, [processedSong, transpositionOffset]);
@@ -96,8 +94,6 @@ const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspecto
   const handleProcessSong = useCallback(() => {
     if (!songInput.trim()) return;
     setIsLoading(true);
-    setProcessedSong(null);
-
     setTimeout(() => {
       try {
         const parsedSong = parseSongText(songInput);
@@ -125,14 +121,15 @@ const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspecto
     setSongInput('');
     setProcessedSong(null);
     setTranspositionOffset(0);
-    transpositionManagerRef.current?.reset();
+    // CORRECCIÓN #2: Reseteamos la referencia al manager.
+    // Esto asegura que se cree uno nuevo la próxima vez que se analice una canción.
+    transpositionManagerRef.current = null;
   }, []);
 
   const handleAddToComposer = useCallback(() => {
     if (processedSong) {
       const songForComposer = JSON.parse(JSON.stringify(processedSong));
       const currentOffset = transpositionOffset;
-
       if (currentOffset !== 0) {
         songForComposer.allChords.forEach((chord: SequenceItem) => {
           if (chord.rootNote) {
@@ -158,37 +155,42 @@ const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspecto
   }, []);
 
   return (
-    <main id="extractor-mode" className={`mode-content ${isActive ? 'active' : ''}`}>
-      <p className="description" style={{ maxWidth: '650px' }}>Pega la letra y los acordes de una canción. Haz clic en un acorde para ver su diagrama y escucharlo.</p>
-      <textarea
-        id="song-input"
-        placeholder="Pega o escribe tu canción aquí...."
-        value={songInput}
-        onChange={(e) => setSongInput(e.target.value)}
-      ></textarea>
-      
-      <div className="extractor-controls-container">
-        <div className="extractor-actions-left">
-          <button id="process-song-btn" className="button-primary" onClick={handleProcessSong}>Analizar</button>
-          <button id="add-to-composer-btn" className="button-secondary" onClick={handleAddToComposer} disabled={!processedSong || processedSong.allChords.length === 0}>Añadir al Compositor</button>
-          <button id="clear-extractor-btn" className="button-secondary" onClick={handleClearExtractor}>Limpiar</button>
-        </div>
-        <div className="extractor-actions-right">
-          <div id="transposition-controls" className="transposition-controls" style={{ display: processedSong && processedSong.allChords.length > 0 ? 'flex' : 'none' }}>
-            <button id="transpose-down-btn" className="button-secondary" onClick={handleTransposeDown}>-</button>
-            <span id="transposition-display" ref={transpositionDisplayRef}>Original</span>
-            <button id="transpose-up-btn" className="button-secondary" onClick={handleTransposeUp}>+</button>
+    <main id="extractor-mode" className={`${isActive ? 'block' : 'hidden'}`}>
+      <p className="hidden">Pega la letra y los acordes de una canción. Haz clic en un acorde para ver su diagrama y escucharlo.</p>
+      <div className="input-panel">
+        <textarea
+          id="song-input"
+          placeholder="Pega o escribe tu canción aquí...."
+          value={songInput}
+          onChange={(e) => setSongInput(e.target.value)}
+          className="textarea-style"
+        ></textarea>
+        
+        <div className="button-row">
+          <div className="main-actions-group">
+            <button id="process-song-btn" className="btn-azul" onClick={handleProcessSong}>Analizar</button>
+            <button id="add-to-composer-btn" className="btn-verde" onClick={handleAddToComposer} disabled={!processedSong || processedSong.allChords.length === 0}>Añadir al Compositor</button>
+            <button id="clear-extractor-btn" className="btn-rojo" onClick={handleClearExtractor}>Limpiar</button>
           </div>
+          
+          {processedSong && processedSong.allChords.length > 0 && (
+            <div id="transposition-controls" className="transposition-controls-group">
+              <button id="transpose-down-btn" className="btn-control" onClick={handleTransposeDown}>-</button>
+              <div id="transposition-display" ref={transpositionDisplayRef} className="transposition-display-segment">Original</div>
+              <button id="transpose-up-btn" className="btn-control" onClick={handleTransposeUp}>+</button>
+            </div>
+          )}
         </div>
       </div>
-      
+
       {isLoading && (
-        <div id="extractor-loader" className="loader-container">
-          <div className="spinner"></div>
+        <div id="extractor-loader" className="flex flex-col justify-center items-center gap-4 my-10 text-text-muted">
+          <div className="w-10 h-10 border-4 border-solid border-grey border-t-accent-green rounded-full animate-spin"></div>
           <p>Analizando...</p>
         </div>
       )}
-      <div id="song-output" className="song-sheet-container" ref={songOutputRef}>
+
+      <div id="song-output" className="text-left bg-bg-card rounded-xl p-10 mt-6 font-jetbrains overflow-x-auto" ref={songOutputRef}>
       </div>
     </main>
   );

@@ -10,13 +10,12 @@ interface ComposerModeProps {
   audioEngine: AudioEngine;
   showInspector: ShowInspectorFn;
   song: ProcessedSong | null;
-  isActive: boolean; // Nueva prop
+  isActive: boolean;
 }
 
 const ComposerMode: React.FC<ComposerModeProps> = ({ audioEngine, showInspector, song, isActive }) => {
   const [currentSong, setCurrentSong] = useState<ProcessedSong | null>(song);
   const [nextChordId, setNextChordId] = useState<number>(1);
-  const [currentInsertingChordId, setCurrentInsertingChordId] = useState<number | null>(null);
   const [transpositionOffset, setTranspositionOffset] = useState<number>(0);
   const [composerChordNameDisplay, setComposerChordNameDisplay] = useState<string>('');
   const [isInsertionIndicatorVisible, setIsInsertionIndicatorVisible] = useState<boolean>(false);
@@ -24,19 +23,20 @@ const ComposerMode: React.FC<ComposerModeProps> = ({ audioEngine, showInspector,
 
   const compositionOutputRef = useRef<HTMLDivElement>(null);
   const composerPianoDisplayRef = useRef<HTMLDivElement>(null);
-  const transpositionDisplayRef = useRef<HTMLSpanElement>(null);
-  const insertionIndicatorRef = useRef<HTMLDivElement>(null);
+  const transpositionDisplayRef = useRef<HTMLDivElement>(null);
 
   const transpositionManagerRef = useRef<TranspositionManager | null>(null);
   const sheetManagerRef = useRef<SheetManager | null>(null);
+  
+  const currentSongRef = useRef(currentSong);
+  useEffect(() => { currentSongRef.current = currentSong; }, [currentSong]);
+  const transpositionOffsetRef = useRef(transpositionOffset);
+  useEffect(() => { transpositionOffsetRef.current = transpositionOffset; }, [transpositionOffset]);
 
-  // Callbacks for SheetManager and other functions
   const updateDisplayPiano = useCallback((item: SequenceItem): void => {
-    const currentTransposition = transpositionOffset;
+    const currentTransposition = transpositionOffsetRef.current;
     const { notesToPress, bassNoteIndex, allNotesForRange } = getChordNotes(item, currentTransposition);
-
-    setComposerChordNameDisplay(formatChordName(item, { style: 'long' }, currentTransposition));
-
+    setComposerChordNameDisplay(formatChordName(item, { style: 'short' }, currentTransposition));
     if (composerPianoDisplayRef.current) {
       if (allNotesForRange.length > 0) {
         const { startNote, endNote } = calculateOptimalPianoRange(allNotesForRange, 15, 2);
@@ -45,82 +45,37 @@ const ComposerMode: React.FC<ComposerModeProps> = ({ audioEngine, showInspector,
         composerPianoDisplayRef.current.innerHTML = '';
       }
     }
-  }, [transpositionOffset]);
+  }, []);
 
   const addChordToSongData = useCallback((item: SequenceItem, target: { lineIndex: number; charIndex: number }) => {
-    if (!currentSong || item.id === undefined || !target) return;
-
-    const newItem = { ...item, raw: formatChordName(item, { style: 'short' }, transpositionOffset) };
-    const targetLine = currentSong.lines[target.lineIndex];
+    if (!currentSongRef.current || item.id === undefined || !target) return;
+    const newItem = { ...item, raw: formatChordName(item, { style: 'short' }, transpositionOffsetRef.current) };
+    const targetLine = currentSongRef.current.lines[target.lineIndex];
     if (targetLine) {
       const safePosition = Math.min(target.charIndex, targetLine.lyrics.length);
       const newSongChord: SongChord = { chord: newItem, position: safePosition };
-
-      const newLines = [...currentSong.lines];
-      newLines[target.lineIndex] = {
-        ...targetLine,
-        chords: [...targetLine.chords, newSongChord].sort((a, b) => a.position - b.position),
-      };
-
-      setCurrentSong(prevSong => {
-        if (!prevSong) return null;
-        return {
-          ...prevSong,
-          lines: newLines,
-          allChords: [...prevSong.allChords, newItem],
-        };
-      });
+      const newLines = [...currentSongRef.current.lines];
+      newLines[target.lineIndex] = { ...targetLine, chords: [...targetLine.chords, newSongChord].sort((a, b) => a.position - b.position) };
+      setCurrentSong(prevSong => prevSong ? { ...prevSong, lines: newLines, allChords: [...prevSong.allChords, newItem] } : null);
     }
-  }, [currentSong, transpositionOffset]);
-
+  }, []);
+  
   const updateChordInSong = useCallback((updatedItem: SequenceItem) => {
-    if (!currentSong || updatedItem.id === undefined) return;
-
-    const newLines = currentSong.lines.map(line => ({
-      ...line,
-      chords: line.chords.map(songChord =>
-        songChord.chord.id === updatedItem.id ? { ...songChord, chord: updatedItem } : songChord
-      ),
-    }));
-
-    const newAllChords = currentSong.allChords.map(chord =>
-      chord.id === updatedItem.id ? updatedItem : chord
-    );
-
-    setCurrentSong(prevSong => {
-      if (!prevSong) return null;
-      return {
-        ...prevSong,
-        lines: newLines,
-        allChords: newAllChords,
-      };
-    });
-  }, [currentSong]);
+    if (!currentSongRef.current || updatedItem.id === undefined) return;
+    const newLines = currentSongRef.current.lines.map(line => ({ ...line, chords: line.chords.map(sc => sc.chord.id === updatedItem.id ? { ...sc, chord: updatedItem } : sc) }));
+    const newAllChords = currentSongRef.current.allChords.map(chord => chord.id === updatedItem.id ? updatedItem : chord);
+    setCurrentSong(prevSong => prevSong ? { ...prevSong, lines: newLines, allChords: newAllChords } : null);
+  }, []);
 
   const handleDeleteChord = useCallback((itemToDelete: SequenceItem): void => {
-    if (!currentSong || itemToDelete.id === undefined) return;
-
-    const newAllChords = currentSong.allChords.filter(c => c.id !== itemToDelete.id);
-    const newLines = currentSong.lines.map(line => ({
-      ...line,
-      chords: line.chords.filter(sc => sc.chord.id !== itemToDelete.id),
-    }));
-
-    setCurrentSong(prevSong => {
-      if (!prevSong) return null;
-      return {
-        ...prevSong,
-        lines: newLines,
-        allChords: newAllChords,
-      };
-    });
-  }, [currentSong]);
+    if (!currentSongRef.current || itemToDelete.id === undefined) return;
+    const newAllChords = currentSongRef.current.allChords.filter(c => c.id !== itemToDelete.id);
+    const newLines = currentSongRef.current.lines.map(line => ({ ...line, chords: line.chords.filter(sc => sc.chord.id !== itemToDelete.id) }));
+    setCurrentSong(prevSong => prevSong ? { ...prevSong, lines: newLines, allChords: newAllChords } : null);
+  }, []);
 
   const handleExportSong = useCallback(() => {
-    if (!currentSong) {
-      alert('No hay canción para exportar.');
-      return;
-    }
+    if (!currentSong) return;
     const songJson = JSON.stringify(currentSong, null, 2);
     const blob = new Blob([songJson], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -144,10 +99,8 @@ const ComposerMode: React.FC<ComposerModeProps> = ({ audioEngine, showInspector,
           const content = await file.text();
           const importedSong = JSON.parse(content);
           setCurrentSong(importedSong);
-          alert('Canción importada exitosamente.');
-        } catch (error: any) {
-          console.error("Error al importar el archivo de canción:", error);
-          alert("Error al importar la canción: " + error.message);
+        } catch (error) {
+          console.error("Error al importar el archivo:", error);
         }
       }
     };
@@ -157,8 +110,7 @@ const ComposerMode: React.FC<ComposerModeProps> = ({ audioEngine, showInspector,
   const getCharWidth = useCallback((element: HTMLElement): number => {
     const span = document.createElement('span');
     span.textContent = '0';
-    span.style.visibility = 'hidden';
-    span.style.position = 'absolute';
+    span.style.cssText = 'visibility:hidden; position:absolute;';
     element.appendChild(span);
     const width = span.getBoundingClientRect().width;
     element.removeChild(span);
@@ -177,63 +129,30 @@ const ComposerMode: React.FC<ComposerModeProps> = ({ audioEngine, showInspector,
     } else { setIsInsertionIndicatorVisible(false); }
   }, []);
 
-  const handleMouseLeave = useCallback(() => {
-    setIsInsertionIndicatorVisible(false);
-  }, []);
+  const handleMouseLeave = useCallback(() => setIsInsertionIndicatorVisible(false), []);
 
   const handleInsertionClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     const lyricsEl = target.closest<HTMLElement>('.lyrics-layer');
     const chordActionEl = target.closest('.chord-action, .chord-annotation');
     if (!lyricsEl || chordActionEl) return;
-
-    if (!currentSong) {
-      setCurrentSong({ lines: [{ lyrics: '', chords: [], isInstrumental: false }], allChords: [] });
-      setNextChordId(1);
-    }
-
     const songLineEl = lyricsEl.closest<HTMLElement>('.song-line')!;
     const lineIndex = parseInt(songLineEl.dataset.lineIndex || '0', 10);
-
     const rect = lyricsEl.getBoundingClientRect();
     const charWidth = getCharWidth(lyricsEl);
-    const relativeX = e.clientX - rect.left;
-    let charIndex = Math.round(relativeX / charWidth);
-    const text = lyricsEl.textContent || '';
-    charIndex = Math.max(0, Math.min(charIndex, text.length));
-
-    const capturedInsertionTarget = { lineIndex, charIndex };
-    setCurrentInsertingChordId(null);
-
+    const charIndex = Math.round((e.clientX - rect.left) / charWidth);
+    const capturedInsertionTarget = { lineIndex, charIndex: Math.max(0, Math.min(charIndex, (lyricsEl.textContent || '').length)) };
     const newChordTemplate: SequenceItem = { rootNote: 'C', type: 'Mayor', inversion: 0 };
-
     showInspector(newChordTemplate, {
-      onUpdate: (chordBeingBuilt) => {
-        if (currentInsertingChordId === null) {
-          const newId = nextChordId;
-          setCurrentInsertingChordId(newId);
-          setNextChordId(prevId => prevId + 1);
-          addChordToSongData({ ...chordBeingBuilt, id: newId }, capturedInsertionTarget);
-        } else {
-          updateChordInSong(chordBeingBuilt);
-        }
-      },
+      onUpdate: () => {},
       onInsert: (chordToInsert) => {
-        if (currentInsertingChordId === null) {
-          const newId = nextChordId;
-          setCurrentInsertingChordId(newId);
-          setNextChordId(prevId => prevId + 1);
-          addChordToSongData({ ...chordToInsert, id: newId }, capturedInsertionTarget);
-        }
-        setIsInsertionIndicatorVisible(false);
-        setCurrentInsertingChordId(null);
+        const newId = nextChordId;
+        addChordToSongData({ ...chordToInsert, id: newId }, capturedInsertionTarget);
+        setNextChordId(prevId => prevId + 1);
       },
-      onDelete: () => {
-        setIsInsertionIndicatorVisible(false);
-        setCurrentInsertingChordId(null);
-      },
+      onDelete: () => {},
     });
-  }, [currentSong, nextChordId, getCharWidth, showInspector, addChordToSongData, updateChordInSong, currentInsertingChordId]);
+  }, [nextChordId, getCharWidth, showInspector, addChordToSongData]);
 
   const handleTransposeUp = useCallback(() => {
     transpositionManagerRef.current?.up();
@@ -245,7 +164,6 @@ const ComposerMode: React.FC<ComposerModeProps> = ({ audioEngine, showInspector,
     setTranspositionOffset(transpositionManagerRef.current?.getOffset() || 0);
   }, []);
 
-  // Update currentSong when prop changes
   useEffect(() => {
     if (song) {
       setCurrentSong(song);
@@ -256,88 +174,56 @@ const ComposerMode: React.FC<ComposerModeProps> = ({ audioEngine, showInspector,
     }
   }, [song]);
 
-  const currentSongRef = useRef<ProcessedSong | null>(null);
-  const transpositionOffsetRef = useRef<number>(0);
-
-  // Update refs whenever state changes
-  useEffect(() => {
-    currentSongRef.current = currentSong;
-  }, [currentSong]);
-
-  useEffect(() => {
-    transpositionOffsetRef.current = transpositionOffset;
-  }, [transpositionOffset]);
-
-  // Initialize TranspositionManager and SheetManager once
   useEffect(() => {
     if (transpositionDisplayRef.current && !transpositionManagerRef.current) {
-      transpositionManagerRef.current = new TranspositionManager(
-        transpositionDisplayRef.current,
-        () => sheetManagerRef.current?.render(currentSongRef.current, transpositionOffsetRef.current) // Use refs for latest values
-      );
+      transpositionManagerRef.current = new TranspositionManager(transpositionDisplayRef.current, () => sheetManagerRef.current?.render(currentSongRef.current, transpositionOffsetRef.current));
     }
-
     if (compositionOutputRef.current && !sheetManagerRef.current) {
-    sheetManagerRef.current = new SheetManager({
-      container: compositionOutputRef.current,
-      audioEngine: audioEngine,
-      showInspector: showInspector,
-      updateChord: updateChordInSong,
-      deleteChord: handleDeleteChord,
-      onChordClick: updateDisplayPiano,
-      getTransposition: () => transpositionOffsetRef.current,
-      getSong: () => currentSongRef.current
-    });
-
+      sheetManagerRef.current = new SheetManager({ container: compositionOutputRef.current, audioEngine, showInspector, updateChord: updateChordInSong, deleteChord: handleDeleteChord, onChordClick: updateDisplayPiano, getTransposition: () => transpositionOffsetRef.current, getSong: () => currentSongRef.current });
     }
-  }, [audioEngine, showInspector, updateDisplayPiano]);
+  }, [audioEngine, showInspector, updateChordInSong, handleDeleteChord, updateDisplayPiano]);
 
-  // Update SheetManager callbacks when they change
-  useEffect(() => {
-    if (sheetManagerRef.current) {
-      sheetManagerRef.current.updateCallbacks(updateChordInSong, handleDeleteChord);
-    }
-  }, [updateChordInSong, handleDeleteChord]);
-
-  // Render sheet when currentSong or transpositionOffset changes
   useEffect(() => {
     sheetManagerRef.current?.render(currentSong, transpositionOffset);
   }, [currentSong, transpositionOffset]);
 
   return (
-    <main id="composer-mode" className={`mode-content ${isActive ? 'active' : ''}`}>
+    <main id="composer-mode" className={`mode-content ${isActive ? 'block' : 'hidden'}`}>
       <div className="composition-header">
         <div className="piano-and-name-container">
-          <h2 id="composer-chord-name-display" className="chord-name-display">{composerChordNameDisplay}</h2>
-          <div id="composer-piano-display" className="piano-container-small" ref={composerPianoDisplayRef}>
+          <h2 id="composer-chord-name-display" className="text-neon-blue text-shadow-neon-blue text-clamp-lg font-bold font-victor-mono m-0 transition-colors">
+            {composerChordNameDisplay || 'Selecciona o añade un acorde'}
+          </h2>
+          <div 
+            id="composer-piano-display" 
+            className="piano-container-small" 
+            ref={composerPianoDisplayRef}>
           </div>
         </div>
-        <div className="composer-controls-group">
-          <div id="composer-transposition-controls" className="controls">
-            <button id="composer-transpose-down-btn" className="button-secondary" onClick={handleTransposeDown}>-</button>
-            <span id="composer-transposition-display" ref={transpositionDisplayRef}>Original</span>
-            <button id="composer-transpose-up-btn" className="button-secondary" onClick={handleTransposeUp}>+</button>
+        <div className="composer-controls">
+          <div className="transposition-controls-group">
+            <button className="btn-control" onClick={handleTransposeDown}>-</button>
+            <div ref={transpositionDisplayRef} className="transposition-display-segment">Original</div>
+            <button className="btn-control" onClick={handleTransposeUp}>+</button>
           </div>
-          <div className="composer-file-controls controls">
-            <button id="export-song-btn" className="button-secondary button-export" onClick={handleExportSong}>Exportar</button>
-            <button id="import-song-btn" className="button-secondary button-import" onClick={handleImportSong}>Importar</button>
+          <div className="flex items-center gap-3">
+             <button className="btn-composer-action" onClick={handleExportSong}>Exportar</button>
+             <button className="btn-composer-action" onClick={handleImportSong}>Importar</button>
           </div>
         </div>
       </div>
-      <div id="composition-output" ref={compositionOutputRef} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave} onClick={handleInsertionClick}>
+      <div id="composition-output" className="song-sheet-container" ref={compositionOutputRef} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave} onClick={handleInsertionClick}>
       </div>
       {isInsertionIndicatorVisible && insertionIndicatorPosition && (
         <div
           id="chord-insertion-indicator"
-          className="insert-placeholder"
-          ref={insertionIndicatorRef}
+          className="inline-flex items-center justify-center w-6 h-6 text-accent-green border border-dashed border-accent-green rounded-full text-xl leading-none transition-opacity duration-200 absolute pointer-events-none z-10 opacity-100"
           style={{
-            display: 'inline-flex',
             left: insertionIndicatorPosition.x,
             top: insertionIndicatorPosition.y,
+            transform: 'translate(-50%, -50%)',
           }}
-        >+
-        </div>
+        >+</div>
       )}
     </main>
   );

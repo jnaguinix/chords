@@ -1,1000 +1,198 @@
-:root {
-    --bg-main: #1A1A1A; /* Un poco más oscuro */
-    --bg-card: #2C2C2C; /* Ligeramente más claro que el fondo principal */
-    --text-main: #E0E0E0; /* Texto principal más suave */
-    --accent-green: #6B9F1A; /* Verde de acento más apagado */
-    --accent-orange: #E09A1F; /* Naranja de acento más apagado */
-    --accent-red: #C0392B; /* Nuevo color rojo de acento */
-    --accent-red-hover: #E74C3C; /* Hover del rojo de acento */
-    --accent-yellow: #F39C12; /* Nuevo color amarillo de acento */
-    --accent-yellow-hover: #F7DC6F; /* Hover del amarillo de acento */
-    --white: #F0F0F0; /* Blanco ligeramente más suave */
-    --black: #101010; /* Negro más profundo */
-    --grey: #3A3A3A; /* Gris más oscuro para bordes y separadores */
-    --shadow: 0 6px 20px rgba(0, 0, 0, 0.2); /* Sombra más difusa y pronunciada */
-    --text-muted-color: #909090; /* Texto muted más oscuro */
-    --interactive-blue: #418dcc; /* Azul interactivo ligeramente más brillante */
-    --interactive-blue-hover: #9AC0FF; /* Hover del azul interactivo */
-    --neon-blue: #00ff0d; /* Nuevo color azul neón */
-    --neon-blue-glow: 0 0 5px #00ff0d, 0 0 15px #eeff00, 0 0 25px #15ff00; /* Efecto de brillo neón */
-}
-
-*, *::before, *::after {
-    box-sizing: border-box;
-}
-
-html {
-    background-color: var(--bg-main);
-    width: 100%;
-    height: 100%;
-}
-
+/* ============================================ */
+/* Estilos Base con la Nueva Temática (CORREGIDO) */
+/* ============================================ */
 body {
-    margin: 0;
-    font-family: 'Victor Mono', monospace;
-    color: var(--text-main);
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    min-height: 100vh;
-    padding: 25px 20px; /* Más padding en el body */
-    width: 100%;
-    height: 100%;
+  @apply bg-dark-main text-light-main font-fira;
 }
 
-#root {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
+/* --- Estilos de la Navegación --- */
+.new-nav { @apply flex gap-[30px] justify-center items-center my-8 text-xl; }
+.new-nav-item {
+  @apply p-0 bg-transparent border-none text-2xl; 
+  color: #99ff33;
+  opacity: 0.7;
+  @apply cursor-pointer transition-opacity duration-200 tracking-wider font-fira hover:opacity-100;
+}
+.new-nav-item.active {
+  opacity: 1;
+  @apply text-brand-green-light font-bold text-shadow-glow;
 }
 
-#app {
-    width: 95%; /* Aumentar el ancho para más espacio */
-    max-width: 1400px; /* Aumentar el ancho máximo */
-    text-align: center;
-    padding: 30px; /* Más padding alrededor del contenido */
-    background-color: var(--bg-card); /* Fondo de tarjeta para el app */
-    border-radius: 15px; /* Bordes más redondeados para el contenedor principal */
-    box-shadow: var(--shadow); /* Aplicar la nueva sombra */
+/* ======== ESTILOS MODERNIZADOS DEL EXTRACTOR (CORREGIDO) ======== */
+.input-panel {
+  @apply flex flex-col items-center w-full px-4;
 }
 
-/* ============================================ */
-/* ENCABEZADO Y TÍTULO                          */
-/* ============================================ */
-
-.description {
-    display: none;
+.textarea-style {
+  @apply w-full max-w-4xl h-48 p-4 mb-4 rounded-lg resize-y bg-[#2d2d2d] text-[#e0e0e0] border-2 border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-[#99ff33];
 }
 
-/* ============================================ */
-/* PESTAÑAS DE NAVEGACIÓN                       */
-/* ============================================ */
-
-.tabs {
-    margin-bottom: 2.5rem; /* Más espacio debajo de las pestañas */
-    border-bottom: 1px solid var(--grey);
+.button-row {
+  @apply flex justify-between items-center w-full max-w-4xl flex-wrap gap-4 mt-2;
 }
 
-.tab {
-    font-size: 1.1rem;
-    font-weight: 500;
-    padding: 12px 22px; /* Más padding */
-    background: none;
-    border: none;
-    color: var(--text-muted-color);
-    cursor: pointer;
-    border-bottom: 3px solid transparent;
-    transition: color 0.3s, border-color 0.3s, transform 0.1s, box-shadow 0.3s; /* Transiciones más suaves */
+/* --- Grupo de Botones de Acción (Vuelven a ser individuales) --- */
+.main-actions-group {
+  @apply flex items-center gap-3; /* Espacio entre botones */
 }
 
-.tab:hover {
-    color: var(--white); /* Cambiar color de texto en hover */
-    transform: translateY(-2px); /* Ligero levantamiento */
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Sombra sutil */
+/* Colores y estilos individuales para los botones de acción */
+.btn-azul, .btn-verde, .btn-rojo {
+    @apply py-2 px-5 rounded-lg text-white font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg;
+}
+.btn-azul { @apply bg-blue-600 hover:enabled:bg-blue-700; }
+.btn-verde { @apply bg-green-600 hover:enabled:bg-green-700; }
+.btn-rojo { @apply bg-red-600 hover:enabled:bg-red-700; }
+
+/* --- Controles de Transposición (Estilo Unificado) --- */
+.transposition-controls-group {
+  @apply flex items-stretch shadow-lg rounded-lg overflow-hidden;
 }
 
-.tab:active {
-    transform: translateY(0); /* Efecto de "presión" */
-    box-shadow: none;
+.transposition-controls-group > * { 
+  @apply border-none;
 }
 
-.tab.active {
-    color: var(--accent-green);
-    border-bottom-color: var(--accent-green);
-    font-weight: 700; /* Hacer la pestaña activa más negrita */
+/* Color del separador entre elementos */
+.transposition-controls-group > *:not(:first-child) {
+  border-left: 2px solid #4a4a4a; /* Separador oscuro y sutil */
 }
 
-.mode-content { display: none; }
-.mode-content.active { display: block; }
-
-.controls {
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
-    gap: 20px;
-    margin: 40px 0;
-    flex-wrap: wrap;
+.btn-control { 
+  @apply font-bold text-lg w-10 h-10 cursor-pointer transition-colors flex items-center justify-center;
+  /* Hacemos los botones naranjas para que coincidan con los de acción */
+  background-color: #4a2deeff;
+  color: white;
+}
+.btn-control:hover {
+  /* Un naranja más brillante al pasar el ratón */
+  background-color: #fb923c; /* Tailwind's orange-400 */
 }
 
-.select-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+.transposition-display-segment { 
+  @apply font-medium px-4 flex items-center justify-center text-lg;
+  /* El display central se mantiene oscuro para dar contraste */
+  background-color: #3a3a3a;
+  color: #e0e0e0;
+  min-width: 120px;
 }
 
-.select-wrapper label {
-    font-size: 0.9rem;
-    margin-bottom: 8px;
-    color: var(--text-muted-color);
-    text-transform: uppercase;
-    font-weight: 400;
+/* Contenedor de la partitura extraída */
+#song-output {
+    @apply mt-10; /* Aumentamos el margen superior para dar más espacio */
 }
-
-select, textarea {
-    font-size: 1rem;
-    padding: 12px 16px;
-    border-radius: 10px; /* Ligeramente más redondeado */
-    border: 1px solid var(--grey);
-    background-color: var(--bg-card);
-    color: var(--text-main);
-    cursor: pointer;
-    min-width: 180px;
-    transition: border-color 0.3s, box-shadow 0.3s; /* Transiciones más suaves */
-}
-
-select:focus, textarea:focus {
-    outline: none;
-    border-color: var(--accent-green);
-    box-shadow: 0 0 0 3px rgba(var(--accent-green), 0.3); /* Sombra al enfocar */
-}
-
-select {
-    padding-right: 40px;
-    appearance: none;
-    -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23a0a0a0'%3E%3Cpath d='M11.9997 13.1714L16.9495 8.22168L18.3637 9.63589L11.9997 15.9999L5.63574 9.63589L7.04996 8.22168L11.9997 13.1714Z'%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
-    background-size: 24px;
-}
-
-.button-primary, .button-secondary {
-    font-size: 0.9em;
-    padding: 10px 12px;
-    border-radius: 10px;
-    cursor: pointer;
-    border: none;
-    transition: background-color 0.3s, opacity 0.3s, transform 0.1s;
-    font-weight: 500;
-    font-family: 'Victor Mono', monospace;
-}
-
-.button-primary { background-color: var(--accent-green); color: var(--text-main); }
-.button-primary:hover:not(:disabled) { background-color: #7CBF20; transform: translateY(-1px); } /* Efecto hover sutil */
-.button-primary:active:not(:disabled) { transform: translateY(0); } /* Efecto click */
-
-#process-song-btn {
-    background-color: var(--interactive-blue);
-}
-#process-song-btn:hover:not(:disabled) {
-    background-color: var(--interactive-blue-hover);
-}
-
-.button-secondary { background-color: var(--bg-card); color: var(--text-main); border: 1px solid var(--grey); }
-.button-secondary:hover:not(:disabled) { background-color: var(--grey); transform: translateY(-1px); }
-.button-secondary:active:not(:disabled) { transform: translateY(0); }
-
-#chord-inspector-delete-btn {
-    background-color: var(--accent-red);
-    border-color: var(--accent-red);
-}
-
-#chord-inspector-delete-btn:hover:not(:disabled) {
-    background-color: var(--accent-red-hover);
-    border-color: var(--accent-red-hover);
-}
-
-#clear-extractor-btn {
-    background-color: var(--accent-red);
-    border-color: var(--accent-red);
-}
-#clear-extractor-btn:hover:not(:disabled) {
-    background-color: var(--accent-red-hover);
-    border-color: var(--accent-red-hover);
-}
-.button-primary:disabled, .button-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
-
-#add-to-composer-btn {
-    background-color: var(--accent-green);
-    border-color: var(--accent-green);
-}
-#add-to-composer-btn:hover:not(:disabled) {
-    background-color: #7CBF20; /* Un verde ligeramente más brillante para el hover */
-    border-color: #7CBF20;
-}
+/* ======== FIN DE LOS ESTILOS DEL EXTRACTOR ======== */
 
 
-.chord-display-header {
-    display: flex;
-    flex-direction: column; /* Apila los elementos verticalmente */
-    justify-content: center;
-    align-items: center;
-    gap: 15px; /* Espacio vertical entre el contenedor de botones y el nombre del acorde */
-    margin: 30px 0 15px; /* Reducido el margen inferior */
-}
-
-.modifications-and-play-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 20px; /* Espacio entre el editor de modificaciones y el botón de play */
-}
-
-#chord-name {
-    font-size: clamp(1.5rem, 4vw, 2rem);
-    font-weight: 500;
-    color: var(--accent-green);
-    height: auto;
-    margin: 0;
-    transition: color 0.2s;
-    font-family: 'Victor Mono', monospace; /* Forzar Victor Mono */
-}
-
-#composer-chord-name-display {
-    font-size: clamp(1.1rem, 2vw, 1.7rem); /* Tamaño de fuente ajustado para ser más pequeño */
-    font-weight: 700;
-    color: var(--neon-blue);
-    text-shadow: var(--neon-blue-glow);
-    margin: 0;
-    transition: color 0.2s;
-    font-family: 'Victor Mono', monospace;
-}
-
-#piano-container {
-    display: flex;
-    justify-content: center;
-    width: 100%; /* Asegura que el contenedor ocupe todo el ancho disponible */
-    overflow-x: auto; /* Permite el scroll horizontal si el piano es demasiado grande */
-    -webkit-overflow-scrolling: touch; /* Mejora el scroll en iOS */
-    padding-bottom: 10px; /* Espacio para la barra de scroll si aparece */
-}
-
-.piano {
-    position: relative;
-    display: flex;
-    margin: 20px 0;
-    padding: 12px;
-    background: #1e1e1e;
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-    flex-shrink: 0; /* Evita que el piano se encoja más allá de su contenido */
-    min-width: fit-content; /* Asegura que el piano no se encoja más de lo necesario */
-}
-
-.piano .key {
-    cursor: pointer;
-    position: relative;
-    flex-shrink: 1; /* Permite que las teclas se encojan */
-    flex-grow: 1; /* Permite que las teclas crezcan */
-    min-width: 20px; /* Ancho mínimo para las teclas blancas */
-    max-width: 60px; /* Ancho máximo para las teclas blancas */
-}
-
-.piano .note-name {
-    display: block;
-    position: absolute;
-    bottom: 10px;
-    left: 0;
-    width: 100%;
-    text-align: center;
-    font-size: clamp(0.8rem, 2vw, 1.1rem); /* Tamaño de fuente responsivo */
-    font-weight: 500;
-    color: #444;
-    pointer-events: none;
-}
-
-.piano .white {
-    height: 200px; /* Altura base, se puede ajustar con media queries */
-    aspect-ratio: 45 / 200; /* Mantiene la proporción original de la tecla */
-    background: linear-gradient(to bottom, #f9f9f9, #e0e0e0);
-    border: 1px solid #a0a0a0;
-    border-left: none;
-    box-shadow: inset 0 -5px 10px rgba(0,0,0,0.1), 0 2px 2px rgba(0,0,0,0.2);
-    border-bottom-left-radius: 6px;
-    border-bottom-right-radius: 6px;
-}
-
-.piano .white:first-child {
-    border-left: 1px solid #a0a0a0;
-    border-top-left-radius: 6px;
-}
-
-.piano .white:last-child {
-    border-top-right-radius: 6px;
-}
-
-.piano .white.pressed {
-    background: var(--accent-green);
-    box-shadow: 0 0 30px -4px var(--accent-green);
-}
-
-.piano .white.bass-note {
-    background: var(--accent-orange);
-    box-shadow: 0 0 30px -4px var(--accent-orange);
-}
-
-.piano .white.pressed .note-name,
-.piano .white.bass-note .note-name {
-    color: var(--white);
-    text-shadow: 0 0 4px rgba(0,0,0,0.5);
-}
-
-.piano .black {
-    position: absolute;
-    top: -1px;
-    width: 60%; /* Ancho relativo a la tecla blanca */
-    height: 60%; /* Altura relativa a la tecla blanca */
-    background: linear-gradient(to bottom, #3a3a3a, #111);
-    border: 1px solid #000;
-    border-radius: 0 0 5px 5px;
-    z-index: 2;
-    box-shadow: inset 0 -4px 8px rgba(255, 255, 255, 0.15), 0 3px 6px rgba(0,0,0,0.4);
-}
-
-.piano .white .black {
-    left: calc(100% - (var(--black-key-width, 60%) / 2)); /* Posicionamiento relativo */
-}
-
-.piano .black.pressed {
-    background: var(--accent-green);
-    box-shadow: 0 0 20px 2px var(--accent-green);
-}
-
-.piano .black.bass-note {
-    background: var(--accent-orange);
-    box-shadow: 0 0 20px 2px var(--accent-orange);
-}
-
-/* Media query para pantallas más pequeñas, ajusta la altura base de las teclas */
-@media (max-width: 768px) {
-    .piano .white {
-        height: 150px; /* Menor altura para pantallas pequeñas */
-    }
-    .piano .black {
-        height: 90px; /* Ajusta la altura de las teclas negras */
-    }
-}
-
-@media (max-width: 480px) {
-    .piano .white {
-        height: 120px; /* Aún menor altura para móviles */
-    }
-    .piano .black {
-        height: 72px; /* Ajusta la altura de las teclas negras */
-    }
-}
-
-/* ============================================ */
-/* MODO COMPOSITOR (CAMBIOS AQUÍ)               */
-/* ============================================ */
-
-/* --- CAMBIO: Se convierte el modo en un contenedor flexible vertical --- */
-#composer-mode.mode-content.active {
-    display: flex;
-    flex-direction: column;
-    /* Define una altura máxima para que no se salga de la pantalla */
-    /* El valor 200px es un aproximado de la altura del header + tabs, ajústalo si es necesario */
-    max-height: calc(100vh - 200px); 
-}
-
+/* ======== ESTILOS PARA EL COMPOSITOR ======== */
 .composition-header {
-    display: flex; /* Cambiado a flexbox para un control más fácil */
-    justify-content: space-between; /* Espacio entre el piano/nombre y los controles */
-    align-items: center;
-    gap: 2rem;
-    margin-bottom: 1.5rem;
-    flex-shrink: 0; /* Evita que el encabezado se encoja */
+    @apply flex justify-between items-start w-full p-4 gap-6 flex-wrap;
 }
-
 .piano-and-name-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Centrar horizontalmente el nombre y el piano */
-    gap: 10px; /* Espacio entre el nombre del acorde y el piano */
+    @apply flex flex-col items-start gap-3 flex-grow;
 }
-
 .piano-container-small {
-    max-width: 450px;
-    min-width: 280px;
-    justify-self: center;
+    min-height: 80px; /* Evita que el layout salte cuando el piano aparece */
 }
-
-.piano-container-small .piano {
-    background: none;
-    padding: 0;
-    box-shadow: none;
-    margin: 0;
+.composer-controls {
+    @apply flex flex-col items-center gap-4;
 }
-
-.piano-container-small .piano .white {
-    width: 30px; /* Reducir ancho */
-    height: 140px; /* Reducir alto */
+.btn-composer-action {
+    @apply py-2 px-5 rounded-lg font-bold transition-colors shadow-lg w-full;
+    background-color: #4a4a4a; /* Un gris oscuro */
+    color: #e0e0e0; /* Texto claro */
+    border: 1px solid #666;
 }
-
-.piano-container-small .piano .black {
-    width: 18px; /* Reducir ancho */
-    height: 85px; /* Reducir alto */
+.btn-composer-action:hover {
+    background-color: #666;
+    border-color: #888;
 }
-
-.piano-container-small .piano .white .black {
-    left: calc(30px - (18px / 2)); /* Ajustar posición */
-}
-
-.piano-container-small .piano .note-name {
-    display: none;
-}
-
-.composer-controls-group {
-    display: flex;
-    flex-direction: column;
-    gap: 10px; /* Espacio entre el botón Limpiar y los controles de transposición */
-    align-items: center; /* Centrar los elementos dentro del grupo */
-}
-
-#composer-transposition-controls.controls {
-    /* margin-top: 15px; Eliminado, el gap del padre lo maneja */
-    justify-content: center;
-    gap: 5px; /* Reducir el espacio entre los elementos */
-    align-items: center; /* Centrar verticalmente los elementos */
-}
-
-#composer-transposition-controls .button-secondary {
-    background-color: var(--accent-yellow);
-    border-color: var(--accent-yellow);
-    color: var(--black); /* Texto oscuro para el botón amarillo */
-}
-
-#composer-transposition-controls .button-secondary:hover:not(:disabled) {
-    background-color: var(--accent-yellow-hover);
-    border-color: var(--accent-yellow-hover);
-}
-
-#composer-transposition-controls .button-secondary:hover:not(:disabled) {
-    background-color: var(--accent-yellow-hover);
-    border-color: var(--accent-yellow-hover);
-}
-
-/* Estilos para el botón de Exportar */
-.button-export {
-    background-color: var(--black); /* Fondo negro */
-    color: var(--white); /* Texto blanco */
-    border: 1px solid var(--black);
-}
-
-.button-export:hover:not(:disabled) {
-    background-color: var(--grey); /* Un gris más claro en hover */
-    border-color: var(--grey);
-}
-
-/* Estilos para el botón de Importar */
-.button-import {
-    background-color: var(--white); /* Fondo blanco */
-    color: var(--black); /* Texto negro */
-    border: 1px solid var(--white);
-}
-
-.button-import:hover:not(:disabled) {
-    background-color: var(--text-muted-color); /* Un gris más oscuro en hover */
-    border-color: var(--text-muted-color);
-    color: var(--white); /* Texto blanco en hover */
-}
-
-/* --- Extractor Mode Styles --- */
-#song-input {
-    width: 100%;
-    min-height: 200px;
-    background-color: var(--bg-card);
-    border: 1px solid var(--grey);
-    border-radius: 8px;
-    padding: 15px;
-    color: var(--text-main);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 1rem;
-    resize: vertical;
-}
-
-#song-input::-webkit-scrollbar {
-    width: 8px; /* Ancho del scrollbar vertical */
-    height: 8px; /* Alto del scrollbar horizontal */
-}
-
-#song-input::-webkit-scrollbar-track {
-    background: var(--bg-card); /* Color del fondo del track */
-    border-radius: 10px;
-}
-
-#song-input::-webkit-scrollbar-thumb {
-    background-color: var(--grey); /* Color del "pulgar" del scrollbar */
-    border-radius: 10px;
-    border: 2px solid var(--bg-card); /* Borde para que se vea más delgado */
-}
-
-#song-input::-webkit-scrollbar-thumb:hover {
-    background-color: var(--text-muted-color); /* Color al pasar el ratón */
-}
-
-.loader-container {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 15px;
-    margin: 40px 0;
-    color: var(--text-muted-color);
-}
-.spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid var(--grey);
-    border-top-color: var(--accent-green);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* ==========================================================================
-   Estilos UNIFICADOS para las Partituras (Song Sheet)
-   ========================================================================== */
-
-.song-sheet-container {
-    text-align: left;
-    background-color: var(--bg-card);
-    border-radius: 12px; /* Más redondeado */
-    padding: 40px 43px; /* Más padding */
-    margin-top: 25px; /* Más margen superior */
-    font-family: 'JetBrains Mono', monospace;
-    overflow-x: auto;
-}
-
-/* --- CAMBIO: Se hace que la partitura del compositor sea scrollable --- */
-#composition-output.song-sheet-container {
-    margin-top: 0; /* El header ya tiene margen */
-    flex-grow: 1; /* Permite que la partitura ocupe el espacio restante */
-    overflow-y: auto; /* AÑADE EL SCROLL VERTICAL */
-}
-
-/* Estilos para el scrollbar en WebKit (Chrome, Safari, Edge) */
-.song-sheet-container::-webkit-scrollbar {
-    width: 8px; /* Ancho del scrollbar vertical */
-    height: 8px; /* Alto del scrollbar horizontal */
-}
-
-.song-sheet-container::-webkit-scrollbar-track {
-    background: var(--bg-card); /* Color del fondo del track */
-    border-radius: 10px;
-}
-
-.song-sheet-container::-webkit-scrollbar-thumb {
-    background-color: var(--grey); /* Color del "pulgar" del scrollbar */
-    border-radius: 10px;
-    border: 2px solid var(--bg-card); /* Borde para que se vea más delgado */
-}
-
-.song-sheet-container::-webkit-scrollbar-thumb:hover {
-    background-color: var(--text-muted-color); /* Color al pasar el ratón */
-}
+/* ======== FIN DE LOS ESTILOS DEL COMPOSITOR ======== */
 
 
+/* --- Estilos de los Selectores y Controles --- */
+.selector-panel { @apply flex gap-6 justify-center mb-4.5; }
+.selector { @apply flex flex-col items-start min-w-[148px]; }
+.selector-label { @apply text-light-muted text-base font-normal mb-2 ml-0.5 tracking-wider select-none; }
+select.selector-box { 
+  @apply bg-dark-light text-light-main py-2.5 pl-4 rounded-xl text-lg min-w-[130px] text-left tracking-wide shadow-md border-none m-0 opacity-95 font-fira;
+  -webkit-appearance: none; -moz-appearance: none; appearance: none;
+}
+.alteraciones { @apply flex gap-3 justify-center items-center my-5; }
+.alteraciones .mod-button { background-color: #232323; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 16px; cursor: pointer; opacity: 0.9; transition: all; font-family: 'Fira Mono', Consolas, Menlo, monospace; }
+.alteraciones .mod-button.active { background-color: #f88634ff; color: #222; font-weight: bold; opacity: 1; }
+.alteraciones .play-btn { @apply bg-dark-lighter text-light-main w-9 h-9 rounded-lg border-none text-xl ml-2 flex items-center justify-center shadow-md cursor-pointer transition-all font-fira; }
+
+.chord-label { @apply text-center text-brand-green text-3xl mb-9 mt-4.5 tracking-widest font-normal leading-tight; }
+
+/* ============================================ */
+/* ESTILOS DE LA PARTITURA (Song Sheet)         */
+/* ============================================ */
+.song-sheet-container { @apply text-left; }
 .song-line {
-    position: relative;
-    padding-top: 1em;
-    margin-bottom: 0.8em;
-    width: fit-content; 
-    min-width: 100%;
-    z-index: 1;
+  @apply relative pt-4 mb-3 w-max min-w-full;
 }
-.song-line:hover {
-    z-index: 2;
-}
+.lyrics-layer { @apply text-[#ccc] whitespace-pre cursor-text leading-normal text-lg; } /* <-- AÑADIDO: text-lg */
+.chords-layer { @apply absolute top-0 left-0 h-6 pointer-events-none; }
+.chord-positioner { @apply absolute top-0 pointer-events-auto; }
+.chord-visual { @apply inline-block cursor-pointer text-[#6cb2f7] font-bold select-none whitespace-nowrap leading-none p-1 rounded transition-colors; }
+.chord-visual:hover { @apply bg-white/10; }
 
-.lyrics-layer {
-    white-space: pre;
-    cursor: text;
-    line-height: 1.5;
-    color: #ccc;
+/* ============================================ */
+/* ESTILOS DEL MODAL (CORREGIDO)              */
+/* ============================================ */
+.chord-inspector-overlay { @apply fixed inset-0 bg-black/60 z-100 cursor-pointer transition-all opacity-0 invisible; }
+.chord-inspector-modal {
+  @apply fixed top-1/2 left-1/2 bg-dark-light rounded-2xl p-6 z-101 shadow-2xl transition-all w-[90%] max-w-[650px] opacity-0 invisible;
+  transform: translate(-50%, -50%) scale(0.95);
 }
+.chord-inspector-overlay.visible, .chord-inspector-modal.visible { @apply opacity-100 visible; }
+.chord-inspector-modal.visible { transform: translate(-50%, -50%) scale(1); }
+.inspector-header { @apply flex justify-between items-center pb-4 border-b border-grey mb-5 gap-4; }
 
-.chords-layer {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 1.5em;
-    pointer-events: none;
-}
-
-.chord-positioner {
-    position: absolute;
-    top: 0;
-    pointer-events: auto;
-}
-
-.chord-visual {
-    display: inline-block;
-    cursor: pointer;
-    color: var(--interactive-blue);
-    font-weight: bold;
-    user-select: none;
-    white-space: nowrap;
-    line-height: 1;
-    padding: 2px 4px;
-    border-radius: 4px;
-    transition: color 0.2s, background-color 0.2s;
-}
-
-.chord-visual:hover {
-    color: var(--interactive-blue-hover);
-    background-color: rgba(140, 180, 255, 0.1);
-}
-
-.chord-visual.chord-annotation {
-    color: var(--text-muted-color);
-    cursor: default;
-}
-
-.chord-visual.chord-annotation:hover {
-    background-color: transparent;
-}
-
-.chord-visual.instrumental {
-    color: var(--accent-orange);
-    font-style: italic;
-}
-.chord-visual.instrumental:hover {
-    color: #f8be69;
-    background-color: rgba(245, 166, 35, 0.1);
-}
-
-.global-chord-tooltip {
-    position: absolute;
-    background-color: var(--bg-main);
-    color: var(--text-main);
-    padding: 6px 10px; 
-    border-radius: 4px;
-    font-size: 1.2rem; 
-    font-weight: 500;
-    white-space: nowrap;
-    z-index: 9999;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
-}
+/* --- ¡¡AQUÍ ESTÁ LA CORRECCIÓN!! --- */
+.btn-primary-modal { @apply font-fira border-none py-2 px-4 rounded-lg text-dark-main bg-brand-green font-bold transition-all; }
+.btn-delete-modal { @apply font-fira border-none py-2 px-4 rounded-lg text-light-main bg-accent-red font-bold transition-all; }
+.play-btn-modal { @apply font-fira bg-dark-lighter text-light-main w-9 h-9 rounded-lg border-none text-xl flex items-center justify-center shadow-md cursor-pointer transition-all; }
+.btn-close-modal { @apply font-fira bg-transparent border-none text-light-muted text-4xl cursor-pointer leading-none p-0 px-2 transition-colors hover:text-light-main; }
 
 
-.chord-visual:hover .chord-tooltip {
-    opacity: 1;
-    visibility: visible;
+/* ============================================ */
+/* ESTILOS ORIGINALES DEL PIANO (Restaurados)   */
+/* ============================================ */
+.piano { position: relative; display: flex; margin: 20px auto; padding: 12px; background: #1e1e1e; border-radius: 12px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2); flex-shrink: 0; min-width: fit-content; }
+.piano .key { cursor: pointer; position: relative; flex-shrink: 1; flex-grow: 1; min-width: 20px; max-width: 60px; }
+.piano .note-name { display: block; position: absolute; bottom: 10px; left: 0; width: 100%; text-align: center; font-size: clamp(0.8rem, 2vw, 1.1rem); font-weight: 500; color: #444; pointer-events: none; }
+.piano .white { height: 200px; aspect-ratio: 45 / 200; background: linear-gradient(to bottom, #f9f9f9, #e0e0e0); border: 1px solid #a0a0a0; border-left: none; box-shadow: inset 0 -5px 10px rgba(0,0,0,0.1), 0 2px 2px rgba(0,0,0,0.2); border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
+.piano .white:first-child { border-left: 1px solid #a0a0a0; border-top-left-radius: 6px; }
+.piano .white:last-child { border-top-right-radius: 6px; }
+.piano .white.pressed { background: #1665f9ff; box-shadow: 0 0 30px -4px #3988e2ff; }
+.piano .white.bass-note { background: #f97316; box-shadow: 0 0 30px -4px #f97316; }
+.piano .white.pressed .note-name, .piano .white.bass-note .note-name { color: #F0F0F0; text-shadow: 0 0 4px rgba(0,0,0,0.5); }
+.piano .black { position: absolute; top: -1px; width: 60%; height: 60%; background: linear-gradient(to bottom, #3a3a3a, #111); border: 1px solid #000; border-radius: 0 0 5px 5px; z-index: 2; box-shadow: inset 0 -4px 8px rgba(255, 255, 255, 0.15), 0 3px 6px rgba(0,0,0,0.4); }
+.piano .white .black { left: calc(100% - (60% / 2)); }
+.piano .black.pressed { background: #1665f9ff; box-shadow: 0 0 20px 2px #3988e2ff; }
+.piano .black.bass-note { background: #f97316; box-shadow: 0 0 20px 2px #f97316; }
+
+
+/* === AJUSTE PARA EL PIANO DEL COMPOSITOR === */
+#composer-piano-display .piano .white {
+    height: 150px; /* Reducimos la altura de 200px a 150px */
 }
 
-.insert-placeholder {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    color: var(--accent-green);
-    border: 1px dashed var(--accent-green);
-    border-radius: 50%;
-    font-size: 20px;
-    line-height: 1;
-    transition: all 0.2s;
-    position: absolute;
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    z-index: 5;
-    opacity: 0;
+/* === AJUSTE PARA EL PIANO DEL INSPECTOR === */
+.inspector-piano-container .piano {
+    min-width: unset; /* Permitir que el piano se encoja */
+    width: 100%; /* Ocupar el 100% del ancho disponible en el contenedor */
+    max-width: 600px; /* Aumentar el ancho máximo */
 }
 
-
-/* --- Chord Inspector Modal --- */
-#chord-inspector-overlay, #chord-inspector-modal {
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s, visibility 0.3s;
+.inspector-piano-container .piano .white {
+    height: 180px; /* Aumentar la altura de las teclas blancas */
+    min-width: 15px; /* Permitir que las teclas blancas sean más estrechas */
 }
 
-#chord-inspector-overlay.visible, #chord-inspector-modal.visible {
-    opacity: 1;
-    visibility: visible;
-}
-
-#chord-inspector-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    z-index: 100;
-    cursor: pointer;
-}
-
-#chord-inspector-modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.95);
-    background-color: var(--bg-card);
-    border-radius: 20px;
-    padding: 25px;
-    z-index: 101;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
-    min-width: 350px;
-    width: 90%;
-    max-width: 650px;
-    transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
-}
-
-#chord-inspector-modal.visible {
-    transform: translate(-50%, -50%) scale(1);
-}
-
-.inspector-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-bottom: 15px;
-    border-bottom: 1px solid var(--grey);
-    margin-bottom: 20px;
-    gap: 15px;
-}
-
-.inspector-actions {
-    display: flex;
-    gap: 10px; /* Espacio entre los botones de acción */
-}
-
-#chord-inspector-title {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 500;
-    margin-right: auto;
-    font-family: 'Victor Mono', monospace; /* Forzar Victor Mono */
-}
-
-#chord-inspector-close-btn {
-    background: none; border: none;
-    color: var(--text-muted-color);
-    font-size: 2.2rem; cursor: pointer;
-    line-height: 1; padding: 0 5px;
-    transition: color 0.2s;
-}
-#chord-inspector-close-btn:hover { color: var(--white); }
-
-#chord-inspector-piano {
-    margin-bottom: 25px;
-    display: flex;
-    justify-content: center;
-}
-
-.play-btn {
-    background: rgba(255,255,255, 0.1);
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    color: var(--text-main);
-    transition: background-color 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-.play-btn:hover { background-color: var(--accent-green); }
-
-#visualizer-play-btn {
-    width: 40px;
-    height: 40px;
-}
-#visualizer-play-btn svg {
-    width: 16px;
-    height: 16px;
-    margin-left: 3px;
-}
-
-#chord-inspector-play-btn {
-    width: 40px; height: 40px;
-}
-#chord-inspector-play-btn svg { width: 16px; height: 16px; margin-left: 3px; }
-
-#transposition-controls {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px; /* Adjust gap as needed */
-}
-
-#transposition-controls span {
-    color: var(--text-main);
-    font-weight: 500;
-    min-width: 150px;
-    text-align: center;
-}
-
-#transpose-down-btn, #transpose-up-btn {
-    background-color: var(--accent-yellow);
-    border-color: var(--accent-yellow);
-    color: var(--black); /* Texto oscuro para el botón amarillo */
-}
-
-#transpose-down-btn:hover:not(:disabled), #transpose-up-btn:hover:not(:disabled) {
-    background-color: var(--accent-yellow-hover);
-    border-color: var(--accent-yellow-hover);
-}
-
-.inspector-controls {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px; /* Aumentamos un poco el espacio para más claridad */
-    margin-bottom: 25px;
-}
-
-.inspector-controls .select-wrapper {
-    flex-grow: 1;
-    min-width: 150px;
-}
-
-#chord-inspector-piano {
-    margin-top: 15px;
-    margin-bottom: 10px;
-}
-
-#chord-inspector-modal .piano {
-    padding: 10px;
-    margin: 0;
-}
-
-#chord-inspector-modal .piano .white {
-    width: 30px;
-    height: 140px;
-}
-
-#chord-inspector-modal .piano .black {
-    width: 18px;
-    height: 85px;
-}
-
-#chord-inspector-modal .piano .white .black {
-    left: calc(30px - (18px / 2));
-}
-
-#chord-inspector-modal .piano .note-name {
-    display: none;
-}
-
-/* --- ESTILOS DE TAMAÑO PARA CADA MODO --- */
-
-#extractor-mode .lyrics-layer,
-#extractor-mode .chords-layer {
-    font-size: 1.3em; 
-}
-#extractor-mode .chord-visual {
-    font-size: 1rem;
-    transform: scale(0.77);
-    transform-origin: top left;
-}
-
-#composer-mode .lyrics-layer,
-#composer-mode .chords-layer {
-    font-size: 1.7em; 
-}
-#composer-mode .chord-visual {
-    font-size: 1.9rem; 
-    transform: scale(0.5);
-    transform-origin: top left;
-}
-
-/* --- Media query para pantallas pequeñas --- */
-@media (max-width: 768px) { /* Ajustado el breakpoint para tablets */
-    #app {
-        padding: 20px; /* Ajustar padding para pantallas pequeñas */
-    }
-    header h1 {
-        font-size: 1.5rem;
-    }
-    .composition-header {
-        display: block;
-    }
-    .piano-container-small {
-        margin: 0 auto 1rem;
-    }
-}
-        .extractor-controls-container {
-            display: flex;
-            justify-content: space-between; /* <-- Pone un grupo a la izquierda y otro a la derecha */
-            align-items: center;
-            width: 100%;
-            padding: 20px 0;
-        }
-
-        .extractor-actions-left,
-        .extractor-actions-right {
-            display: flex;
-            align-items: center;
-            gap: 12px; /* Espacio entre los botones dentro de cada grupo */
-        }
-
-        .transposition-controls {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-/* ============================================= */
-/* ====== ESTILOS PARA DISPLAY DE ALTERACIONES === */
-/* ============================================= */
-
-.modifications-display {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin: 15px auto; /* Centrado y con margen vertical */
-    padding: 8px 15px;
-    background-color: var(--bg-main); /* Un fondo que contraste un poco */
-    border: 1px solid var(--grey);
-    border-radius: 8px;
-    font-size: 0.95rem;
-    max-width: fit-content; /* Se ajusta al contenido */
-}
-
-.mod-label {
-    font-weight: 500;
-    color: var(--text-muted-color);
-}
-
-.mod-list {
-    color: var(--accent-yellow);
-    font-family: 'JetBrains Mono', monospace;
-    font-weight: bold;
-}
-/* ============================================= */
-/* ====== ESTILOS PARA EDITOR DE ALTERACIONES ==== */
-/* ============================================= */
-
-.modifications-editor {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin: 20px auto;
-    max-width: 90%;
-}
-
-.mod-button {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.9rem;
-    font-weight: 500;
-    padding: 6px 12px;
-    border-radius: 6px;
-    border: 1px solid var(--grey);
-    background-color: var(--bg-card);
-    color: var(--text-muted-color);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.mod-button:hover {
-    background-color: var(--grey);
-    color: var(--white);
-}
-
-.mod-button.selected {
-    background-color: var(--accent-yellow);
-    color: var(--black);
-    border-color: var(--accent-yellow);
-    font-weight: bold;
+.inspector-piano-container .piano .black {
+    width: 60%; /* Ajustar el ancho de las teclas negras a una proporción más adecuada */
+    height: 60%; /* Ajustar la altura de las teclas negras a una proporción más adecuada */
 }

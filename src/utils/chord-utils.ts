@@ -1,7 +1,6 @@
 /*
 ================================================================================
 |                              chord-utils.ts                                  |
-|         (Versión final con formateo de nombres largos)                       |
 ================================================================================
 */
 
@@ -11,13 +10,12 @@ import {
     INDEX_TO_SHARP_NAME, 
     INDEX_TO_FLAT_NAME, 
     CHORD_TYPE_MAP, 
-    CHORD_DISPLAY_LIST,
-    NOTE_NAME_SPANISH,          // ANOTACIÓN: Importamos el nuevo diccionario de notas
-    CHORD_TYPE_TO_READABLE_NAME // ANOTACIÓN: Importamos el nuevo diccionario de tipos de acorde
+    NOTE_NAME_SPANISH,
+    CHORD_TYPE_TO_READABLE_NAME,
+    CHORD_TYPE_TO_SHORT_SYMBOL 
 } from './constants';
 import type { SequenceItem, ProcessedSong, SongLine, SongChord } from '../types';
 
-// El resto de las constantes y funciones de bajo nivel no necesitan cambios.
 const ALTERATION_MAP: { [key: string]: { degree: number, change: number } } = {
     'b5': { degree: 5, change: -1 }, '#5': { degree: 5, change: 1 },
     'b9': { degree: 9, change: -1 }, '#9': { degree: 9, change: 1 },
@@ -170,14 +168,13 @@ export function formatChordName(item: SequenceItem, options: { style: 'short' | 
     const bass = item.bassNote ? transposeNote(item.bassNote, transpositionOffset) : null;
 
     if (options.style === 'short') {
-        const displayInfo = CHORD_DISPLAY_LIST.find(d => d.value === item.type);
-        const suffix = displayInfo ? (displayInfo.text === 'Mayor' ? '' : displayInfo.text) : '';
+        const suffix = CHORD_TYPE_TO_SHORT_SYMBOL[item.type] ?? '';
         
         let alterationsString = '';
         const allMods = [...(item.alterations || []), ...(item.additions || [])];
         if (allMods.length > 0) {
             const sortedMods = allMods.sort((a, b) => parseInt(a.replace(/[^0-9]/g, ''), 10) - parseInt(b.replace(/[^0-9]/g, ''), 10));
-            alterationsString = `(${sortedMods.join('')})`;
+            alterationsString = `(${sortedMods.join('').replace(/[()]/g, '')})`;
         }
 
         let displayName = root + suffix + alterationsString;
@@ -189,16 +186,11 @@ export function formatChordName(item: SequenceItem, options: { style: 'short' | 
     }
 
     if (options.style === 'long') {
-        // ANOTACIÓN: ¡AQUÍ ESTÁ LA MAGIA!
-        // Esta sección ha sido completamente reescrita para usar los nuevos diccionarios.
-
         const rootNoteName = NOTE_NAME_SPANISH[root] || root;
         const chordTypeName = CHORD_TYPE_TO_READABLE_NAME[item.type] || item.type;
         
         let displayName = `${rootNoteName} ${chordTypeName}`;
 
-        // La lógica para añadir alteraciones, bajo e inversiones se mantiene igual
-        // porque ya es descriptiva y funciona bien.
         if (item.alterations && item.alterations.length > 0) {
             displayName += ` con alteraciones (${item.alterations.join(', ')})`;
         }
@@ -215,7 +207,6 @@ export function formatChordName(item: SequenceItem, options: { style: 'short' | 
     return ''; 
 }
 
-// El resto de las funciones no necesitan cambios.
 export function parseSongText(songText: string): ProcessedSong {
     songText = songText.replace(/\t/g, '    ');
     const rawLines = songText.split('\n');

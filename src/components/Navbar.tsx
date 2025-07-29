@@ -6,38 +6,24 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ activeMode, setActiveMode }) => {
+  const modes = ['visualizer', 'extractor', 'composer'];
+  const modeNames: { [key: string]: string } = {
+    visualizer: 'Visualizador',
+    extractor: 'Extractor',
+    composer: 'Compositor',
+  };
+
   return (
-    <nav className="tabs">
-      <button
-        id="visualizer-tab"
-        className={`tab ${activeMode === 'visualizer' ? 'active' : ''}`}
-        onClick={() => {
-          console.log('Navbar: Cambiando a visualizer');
-          setActiveMode('visualizer');
-        }}
-      >
-        Visualizador
-      </button>
-      <button
-        id="extractor-tab"
-        className={`tab ${activeMode === 'extractor' ? 'active' : ''}`}
-        onClick={() => {
-          console.log('Navbar: Cambiando a extractor');
-          setActiveMode('extractor');
-        }}
-      >
-        Extractor
-      </button>
-      <button
-        id="composer-tab"
-        className={`tab ${activeMode === 'composer' ? 'active' : ''}`}
-        onClick={() => {
-          console.log('Navbar: Cambiando a composer');
-          setActiveMode('composer');
-        }}
-      >
-        Compositor
-      </button>
+    <nav className="new-nav">
+      {modes.map(mode => (
+        <button
+          key={mode}
+          className={`new-nav-item ${activeMode === mode ? 'active' : ''}`}
+          onClick={() => setActiveMode(mode)}
+        >
+          {modeNames[mode]}
+        </button>
+      ))}
     </nav>
   );
 };
