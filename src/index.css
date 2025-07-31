@@ -256,11 +256,6 @@ select.selector-box {
 /* NUEVOS ESTILOS DE COLOR (Basado en tu feedback)                          */
 /* ======================================================================== */
 
-/* Hace que el título del modal sea blanco para un mejor contraste */
-.modal-header .modal-title {
-    color: white;
-}
-
 /* Hace que el nombre del acorde sugerido sea azul, igual que en la partitura */
 .suggestion-item .suggestion-chord {
     color: #6cb2f7; /* Este es el color azul de tus acordes en .chord-visual */

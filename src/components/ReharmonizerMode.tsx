@@ -150,14 +150,21 @@ const ReharmonizerMode: React.FC<ReharmonizerModeProps> = ({ song, audioEngine, 
         setInsertionContext(null);
     };
 
+    
+
     return (
-        <div className="reharmonizer-container">
-            <div className="reharm-toolbar">
-                <label htmlFor="key-selector">Tonalidad:</label>
-                <select id="key-selector" onChange={handleKeyChange} value={`${currentKey.key}-${currentKey.scale}`}>
+        <div className="reharmonizer-container bg-dark-main">
+            <div className="selector">
+                <label className="selector-label" htmlFor="key-select">TONALIDAD</label>
+                <select
+                    id="key-select"
+                    value={`${currentKey.key}-${currentKey.scale}`}
+                    onChange={handleKeyChange}
+                    className="selector-box"
+                >
                     {ALL_KEYS.map(k => (
                         <option key={`${k.key}-${k.scale}`} value={`${k.key}-${k.scale}`}>
-                            {k.key} {k.scale === 'Major' ? 'Mayor' : 'Menor'}
+                            {k.key} {k.scale}
                         </option>
                     ))}
                 </select>

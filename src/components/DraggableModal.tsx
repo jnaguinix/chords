@@ -71,32 +71,41 @@ const DraggableModal: React.FC<DraggableModalProps> = ({ isVisible, onClose, sug
   return (
     <div
       ref={modalRef}
-      className="draggable-modal font-fira"
-      style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
-      // Se elimina el stopPropagation para permitir que los clics pasen si es necesario,
-      // aunque el panel en sí mismo capturará los clics sobre él.
+      className="draggable-modal font-fira bg-dark-light/90 text-light-main border border-brand-green/50 shadow-2xl shadow-brand-green-light/10 rounded-lg overflow-hidden backdrop-blur-sm"
+      style={{ transform: `translate(${position.x}px, ${position.y}px)`, width: '400px' }}
     >
       <div 
-        className="modal-header" 
+        className="modal-header p-3 border-b border-grey/50 flex justify-center items-center cursor-grab active:cursor-grabbing relative" 
         onMouseDown={handleMouseDown}
       >
-        <h3 className="modal-title">{title}</h3>
-        <button className="modal-close-btn" onClick={onClose}>×</button>
+        <h3 
+          className="modal-title font-bold text-lg"
+          style={{ color: '#99ff33' }}
+        >
+            {title}
+        </h3>
+        <button 
+            onClick={onClose} 
+            className="bg-transparent border-none text-light-muted text-2xl cursor-pointer transition-colors hover:text-light-main p-1 rounded-full hover:bg-white/10 absolute top-1/2 right-3 transform -translate-y-1/2"
+            aria-label="Cerrar modal"
+        >
+            ×
+        </button>
       </div>
-      <div className="modal-content">
-        <ul className="suggestions-list">
+      <div className="modal-content p-4 max-h-80 overflow-y-auto">
+        <ul className="suggestions-list space-y-2">
           {suggestions.length > 0 ? (
             suggestions.map((s, i) => (
               <li key={i} className="suggestion-item" onClick={() => onSuggestionClick(s.chord)}>
                 <div>
                   <strong className="suggestion-chord">{formatChordName(s.chord, { style: 'short' })}</strong>
-                  <span className="suggestion-technique">({s.technique})</span>
+                  <span className="suggestion-technique ml-2 text-light-muted">({s.technique})</span>
                 </div>
-                <p className="suggestion-justification">{s.justification}</p>
+                <p className="suggestion-justification text-sm mt-1">{s.justification}</p>
               </li>
             ))
           ) : (
-            <p>No se encontraron sugerencias para este contexto.</p>
+            <p className="text-light-muted text-center p-4">No se encontraron sugerencias para este contexto.</p>
           )}
         </ul>
       </div>
