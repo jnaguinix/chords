@@ -102,7 +102,7 @@ function App() {
   };
 
   return (
-    <div className="app-container max-w-screen-2xl mx-auto" onClick={handleFirstInteraction}>
+    <div className="app-container" onClick={handleFirstInteraction}>
       <Navbar activeMode={activeMode} onModeChange={setActiveMode} />
       <main className="main-content">
         {renderActiveMode()}
