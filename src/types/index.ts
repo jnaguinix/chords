@@ -1,7 +1,5 @@
 /**
  * Representa un acorde musical individual con todas sus propiedades.
- * - id: Un identificador único opcional para tracking en la UI.
- * - raw: La representación textual original del acorde (ej. "C#m7").
  */
 export type SequenceItem = { 
     id?: number;
@@ -11,12 +9,11 @@ export type SequenceItem = {
     bassNote?: string;
     inversion?: number;
     alterations?: string[];
-    additions?: string[]; // <-- ¡CAMBIO CLAVE! Se añade esta propiedad.
+    additions?: string[];
 };
 
 /**
  * Representa un acorde tal como aparece en una línea de la canción.
- * Contiene el acorde como un objeto y su posición.
  */
 export type SongChord = { 
     chord: SequenceItem;
@@ -43,7 +40,6 @@ export type ProcessedSong = {
 
 /**
  * Define los callbacks que el Chord Inspector puede recibir.
- * Todos son opcionales.
  */
 export type InspectorCallbacks = {
     onUpdate?: (updatedItem: SequenceItem) => void;
@@ -55,3 +51,53 @@ export type InspectorCallbacks = {
  * Define la firma de la función que abre el Chord Inspector.
  */
 export type ShowInspectorFn = (item: SequenceItem, callbacks?: InspectorCallbacks) => void;
+
+
+// ============================================================================
+// --- NUEVOS TIPOS PARA EL MOTOR DE REARMONIZACIÓN ---
+// ============================================================================
+
+/**
+ * Representa la tonalidad detectada o seleccionada para una canción.
+ */
+export type DetectedKey = {
+    key: string; // ej. 'C'
+    scale: 'Major' | 'Minor';
+    confidence?: number; // Opcional, para futura detección automática
+};
+
+/**
+ * Contiene el análisis de un acorde dentro de su contexto tonal.
+ */
+export type ChordAnalysisResult = {
+    degree: string;      // ej. '2'
+    roman: string;       // ej. 'ii'
+    func: 'Tonic' | 'Subdominant' | 'Dominant' | 'Transition';
+};
+
+/**
+ * Es un SequenceItem enriquecido con su análisis contextual.
+ */
+export type ChordAnalysis = SequenceItem & {
+    analysis: ChordAnalysisResult | null;
+};
+
+/**
+ * Define la estructura de una sugerencia de rearmonización.
+ */
+export type ChordSuggestion = {
+    chord: SequenceItem;
+    technique: string;   // ej. "Sustitución de Tritono"
+    justification: string; // ej. "Crea una línea de bajo cromática."
+};
+
+/**
+ * Define la estructura de los ajustes para la rearmonización global.
+ */
+export type ReharmonizationSettings = {
+    jazz: number;       // 0-100
+    gospel: number;     // 0-100
+    neoSoul: number;    // 0-100
+    lofi: number;       // 0-100
+    complexity: number; // 0-100
+};

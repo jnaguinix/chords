@@ -1,98 +1,123 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-// Importaciones de componentes con las rutas corregidas
+import { useState, useEffect, useCallback } from 'react';
 import Navbar from './components/Navbar';
+import type { AppMode } from './components/Navbar';
 import VisualizerMode from './components/VisualizerMode';
 import ExtractorMode from './components/ExtractorMode';
 import ComposerMode from './components/ComposerMode';
+import ReharmonizerMode from './components/ReharmonizerMode';
 import ChordInspectorModal from './components/ChordInspectorModal';
-
 import { AudioEngine, initAudio } from './utils/audio';
-import type { ProcessedSong, SequenceItem, InspectorCallbacks, ShowInspectorFn } from './types';
+import type { SequenceItem, ProcessedSong, InspectorCallbacks, ShowInspectorFn } from './types';
+import './App.css';
 
 function App() {
-  // Lógica de estado original del usuario
-  const [activeMode, setActiveMode] = useState('visualizer');
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [activeMode, setActiveMode] = useState<AppMode>('visualizer');
+  const [audioEngine, setAudioEngine] = useState<AudioEngine | null>(null);
+  const [isAudioInitialized, setIsAudioInitialized] = useState(false);
+  
+  const [inspectorVisible, setInspectorVisible] = useState(false);
   const [inspectorItem, setInspectorItem] = useState<SequenceItem | null>(null);
-  const inspectorCallbacks = useRef<InspectorCallbacks | null>(null);
-  const [composerSong, setComposerSong] = useState<ProcessedSong | null>(null);
-  
-  const audioEngineRef = useRef<AudioEngine | null>(null);
-  if (!audioEngineRef.current) {
-    audioEngineRef.current = new AudioEngine();
-  }
+  const [inspectorCallbacks, setInspectorCallbacks] = useState<InspectorCallbacks>({});
 
-  // Lógica de efectos original del usuario
+  const [songForComposer, setSongForComposer] = useState<ProcessedSong | null>(null);
+  const [songForReharmonizer, setSongForReharmonizer] = useState<ProcessedSong | null>(null);
+
   useEffect(() => {
-    const initializeAudio = async () => {
+    const engine = new AudioEngine();
+    setAudioEngine(engine);
+  }, []);
+
+  const handleFirstInteraction = useCallback(async () => {
+    if (!isAudioInitialized) {
       await initAudio();
-      document.body.removeEventListener('click', initializeAudio);
-      document.body.removeEventListener('keydown', initializeAudio);
-    };
-    document.body.addEventListener('click', initializeAudio);
-    document.body.addEventListener('keydown', initializeAudio);
-    return () => {
-      document.body.removeEventListener('click', initializeAudio);
-      document.body.removeEventListener('keydown', initializeAudio);
-    };
-  }, []);
+      setIsAudioInitialized(true);
+      console.log("Audio Engine Initialized on user interaction.");
+    }
+  }, [isAudioInitialized]);
 
-  // Lógica de callbacks original del usuario
-  const showInspector: ShowInspectorFn = useCallback((item, callbacks) => {
+
+  const showInspector: ShowInspectorFn = (item, callbacks = {}) => {
     setInspectorItem(item);
-    inspectorCallbacks.current = callbacks || null;
-    setIsModalVisible(true);
-  }, []);
+    setInspectorCallbacks(callbacks);
+    setInspectorVisible(true);
+  };
 
-  const handleInspectorClose = useCallback(() => {
-    setIsModalVisible(false);
-    setInspectorItem(null);
-    inspectorCallbacks.current = null;
-  }, []);
+  const handleSaveInspector = (updatedItem: SequenceItem) => {
+    inspectorCallbacks.onUpdate?.(updatedItem);
+    setInspectorVisible(false);
+  };
 
-  const handleInspectorSave = useCallback((updatedItem: SequenceItem) => {
-    inspectorCallbacks.current?.onUpdate?.(updatedItem);
-    handleInspectorClose();
-  }, [handleInspectorClose]);
+  const handleDeleteInspector = (itemToDelete: SequenceItem) => {
+    inspectorCallbacks.onDelete?.(itemToDelete);
+    setInspectorVisible(false);
+  };
 
-  const handleInspectorInsert = useCallback((itemToInsert: SequenceItem) => {
-    inspectorCallbacks.current?.onInsert?.(itemToInsert);
-    handleInspectorClose();
-  }, [handleInspectorClose]);
+  const handleInsertInspector = (itemToInsert: SequenceItem) => {
+    inspectorCallbacks.onInsert?.(itemToInsert);
+    setInspectorVisible(false);
+  };
 
-  const handleInspectorDelete = useCallback((itemToDelete: SequenceItem) => {
-    inspectorCallbacks.current?.onDelete?.(itemToDelete);
-    handleInspectorClose();
-  }, [handleInspectorClose]);
-  
-  const addToComposer = useCallback((song: ProcessedSong) => {
-    setComposerSong(song);
-    setActiveMode('composer');
-  }, []);
+  const handleSendToReharmonizer = (song: ProcessedSong) => {
+    setSongForReharmonizer(song);
+    setActiveMode('reharmonizer');
+  };
+
+  const renderActiveMode = () => {
+    if (!audioEngine) return <div>Cargando motor de audio...</div>;
+
+    switch (activeMode) {
+      case 'visualizer':
+        return <VisualizerMode audioEngine={audioEngine} showInspector={showInspector} />;
+      case 'extractor':
+        return (
+          <ExtractorMode
+            audioEngine={audioEngine}
+            showInspector={showInspector}
+            addToComposer={setSongForComposer}
+            onModeChange={setActiveMode}
+          />
+        );
+      case 'composer':
+        return (
+          <ComposerMode
+            initialSong={songForComposer}
+            audioEngine={audioEngine}
+            showInspector={showInspector}
+            onSendToReharmonizer={handleSendToReharmonizer}
+          />
+        );
+      case 'reharmonizer':
+        // CORRECCIÓN: Se añaden las props 'audioEngine' y 'showInspector'
+        // que faltaban para que el SheetManager funcione correctamente.
+        return (
+          <ReharmonizerMode
+            song={songForReharmonizer}
+            audioEngine={audioEngine}
+            showInspector={showInspector}
+          />
+        );
+      default:
+        return <VisualizerMode audioEngine={audioEngine} showInspector={showInspector} />;
+    }
+  };
 
   return (
-    // Estas clases restauran el fondo oscuro y el layout centrado
-    <div className="bg-bg-main text-text-main font-victor min-h-screen w-full p-6 flex justify-center items-start">
-      {/* Estas clases restauran el contenedor principal, reemplazando el #app de App.css */}
-      <div className="w-[95%] max-w-[1400px] text-center p-8 bg-bg-card rounded-2xl shadow-lg">
-        
-        <Navbar activeMode={activeMode} setActiveMode={setActiveMode} />
-
-        {/* Lógica de renderizado condicional original del usuario */}
-        <VisualizerMode audioEngine={audioEngineRef.current} isActive={activeMode === 'visualizer'} />
-        <ExtractorMode audioEngine={audioEngineRef.current} showInspector={showInspector} addToComposer={addToComposer} isActive={activeMode === 'extractor'} />
-        <ComposerMode audioEngine={audioEngineRef.current} showInspector={showInspector} song={composerSong} isActive={activeMode === 'composer'} />
-
+    <div className="app-container" onClick={handleFirstInteraction}>
+      <Navbar activeMode={activeMode} onModeChange={setActiveMode} />
+      <main className="main-content">
+        {renderActiveMode()}
+      </main>
+      {audioEngine && (
         <ChordInspectorModal
-          isVisible={isModalVisible}
-          onClose={handleInspectorClose}
+          isVisible={inspectorVisible}
+          onClose={() => setInspectorVisible(false)}
           item={inspectorItem}
-          onSave={handleInspectorSave}
-          onInsert={handleInspectorInsert}
-          onDelete={handleInspectorDelete}
-          audioEngine={audioEngineRef.current!}
+          onSave={handleSaveInspector}
+          onDelete={handleDeleteInspector}
+          onInsert={handleInsertInspector}
+          audioEngine={audioEngine}
         />
-      </div>
+      )}
     </div>
   );
 }

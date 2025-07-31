@@ -1,20 +1,27 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { formatChordName, getChordNotes, calculateOptimalPianoRange } from '../utils/chord-utils';
+import { formatChordName, getChordNotes, calculateOptimalPianoRange, transposeNote } from '../utils/chord-utils';
 import { createPiano } from '../utils/piano-renderer';
 import { TranspositionManager } from '../utils/transposition-manager';
 import { SheetManager } from '../utils/sheet-manager';
 import type { ProcessedSong, SequenceItem, ShowInspectorFn, SongChord } from '../types';
 import type { AudioEngine } from '../utils/audio';
 
+// ========================================================================
+// CORRECCIÓN: Se actualiza la interfaz de Props para que coincida con App.tsx
+// - Se cambia 'song' por 'initialSong' para recibir la canción del extractor.
+// - Se elimina 'isActive' ya que App.tsx ahora controla la visibilidad.
+// - Se añade 'onSendToReharmonizer' para conectar con la nueva funcionalidad.
+// ========================================================================
 interface ComposerModeProps {
+  initialSong: ProcessedSong | null;
   audioEngine: AudioEngine;
   showInspector: ShowInspectorFn;
-  song: ProcessedSong | null;
-  isActive: boolean;
+  onSendToReharmonizer: (song: ProcessedSong) => void;
 }
 
-const ComposerMode: React.FC<ComposerModeProps> = ({ audioEngine, showInspector, song, isActive }) => {
-  const [currentSong, setCurrentSong] = useState<ProcessedSong | null>(song);
+const ComposerMode: React.FC<ComposerModeProps> = ({ initialSong, audioEngine, showInspector, onSendToReharmonizer }) => {
+  // El estado 'currentSong' ahora se inicializa con 'initialSong'
+  const [currentSong, setCurrentSong] = useState<ProcessedSong | null>(initialSong);
   const [nextChordId, setNextChordId] = useState<number>(1);
   const [transpositionOffset, setTranspositionOffset] = useState<number>(0);
   const [composerChordNameDisplay, setComposerChordNameDisplay] = useState<string>('');
@@ -32,6 +39,18 @@ const ComposerMode: React.FC<ComposerModeProps> = ({ audioEngine, showInspector,
   useEffect(() => { currentSongRef.current = currentSong; }, [currentSong]);
   const transpositionOffsetRef = useRef(transpositionOffset);
   useEffect(() => { transpositionOffsetRef.current = transpositionOffset; }, [transpositionOffset]);
+
+  // CORRECCIÓN: Este useEffect ahora reacciona a los cambios en 'initialSong'
+  // para cargar una nueva canción cuando se envía desde el Extractor.
+  useEffect(() => {
+    if (initialSong) {
+      setCurrentSong(initialSong);
+      const maxId = Math.max(0, ...initialSong.allChords.map(c => c.id || 0));
+      setNextChordId(maxId + 1);
+      setTranspositionOffset(0);
+      transpositionManagerRef.current?.reset();
+    }
+  }, [initialSong]);
 
   const updateDisplayPiano = useCallback((item: SequenceItem): void => {
     const currentTransposition = transpositionOffsetRef.current;
@@ -165,16 +184,6 @@ const ComposerMode: React.FC<ComposerModeProps> = ({ audioEngine, showInspector,
   }, []);
 
   useEffect(() => {
-    if (song) {
-      setCurrentSong(song);
-      const maxId = Math.max(0, ...song.allChords.map(c => c.id || 0));
-      setNextChordId(maxId + 1);
-      setTranspositionOffset(0);
-      transpositionManagerRef.current?.reset();
-    }
-  }, [song]);
-
-  useEffect(() => {
     if (transpositionDisplayRef.current && !transpositionManagerRef.current) {
       transpositionManagerRef.current = new TranspositionManager(transpositionDisplayRef.current, () => sheetManagerRef.current?.render(currentSongRef.current, transpositionOffsetRef.current));
     }
@@ -187,8 +196,27 @@ const ComposerMode: React.FC<ComposerModeProps> = ({ audioEngine, showInspector,
     sheetManagerRef.current?.render(currentSong, transpositionOffset);
   }, [currentSong, transpositionOffset]);
 
+  // ========================================================================
+  // NUEVA FUNCIÓN: Handler para el botón de enviar a rearmonizador.
+  // ========================================================================
+  const handleSendToReharmonizerClick = useCallback(() => {
+    if (currentSong) {
+      // Se clona la canción para evitar mutaciones inesperadas
+      const songToSend = JSON.parse(JSON.stringify(currentSong));
+      // Se aplica la transposición actual antes de enviarla
+      if (transpositionOffset !== 0) {
+        songToSend.allChords.forEach((chord: SequenceItem) => {
+            if (chord.rootNote) chord.rootNote = transposeNote(chord.rootNote, transpositionOffset);
+            if (chord.bassNote) chord.bassNote = transposeNote(chord.bassNote, transpositionOffset);
+        });
+      }
+      onSendToReharmonizer(songToSend);
+    }
+  }, [currentSong, transpositionOffset, onSendToReharmonizer]);
+
+  // CORRECCIÓN: Se elimina el contenedor <main> y la prop 'isActive'
   return (
-    <main id="composer-mode" className={`mode-content ${isActive ? 'block' : 'hidden'}`}>
+    <>
       <div className="composition-header">
         <div className="piano-and-name-container">
           <h2 id="composer-chord-name-display" className="text-neon-blue text-shadow-neon-blue text-clamp-lg font-bold font-victor-mono m-0 transition-colors">
@@ -209,10 +237,21 @@ const ComposerMode: React.FC<ComposerModeProps> = ({ audioEngine, showInspector,
           <div className="flex items-center gap-3">
              <button className="btn-composer-action" onClick={handleExportSong}>Exportar</button>
              <button className="btn-composer-action" onClick={handleImportSong}>Importar</button>
+             {/* ======================================================================== */}
+             {/* NUEVO BOTÓN: Se añade el botón para enviar al rearmonizador.          */}
+             {/* ======================================================================== */}
+             <button 
+                className="btn-composer-action btn-purpura" // Añade un estilo distintivo si quieres
+                onClick={handleSendToReharmonizerClick}
+                disabled={!currentSong}
+             >
+                Rearmonizar
+             </button>
           </div>
         </div>
       </div>
       <div id="composition-output" className="song-sheet-container" ref={compositionOutputRef} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave} onClick={handleInsertionClick}>
+        {!currentSong && <p className="text-text-muted p-4">Añade una canción desde el Extractor o importa un archivo para empezar a componer.</p>}
       </div>
       {isInsertionIndicatorVisible && insertionIndicatorPosition && (
         <div
@@ -225,7 +264,7 @@ const ComposerMode: React.FC<ComposerModeProps> = ({ audioEngine, showInspector,
           }}
         >+</div>
       )}
-    </main>
+    </>
   );
 };
 

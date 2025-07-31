@@ -54,9 +54,6 @@ export function populateNoteSelector(
 
 /**
  * Rellena un <select> con los nombres de acordes completos, basados en una nota raíz.
- * @param selectElement El elemento <select> a rellenar.
- * @param rootNote La nota raíz actual (ej. "C", "F#").
- * @param defaultValue El tipo de acorde que debe quedar seleccionado (ej. "Mayor").
  */
 export function populateChordTypeSelector(
     selectElement: HTMLSelectElement, 
@@ -166,14 +163,14 @@ export function createSongSheet(
 
     lines.forEach((line, lineIndex) => {
         const lineEl = document.createElement('div');
-        lineEl.className = 'song-line text-2xl'; // <-- La 'regla' grande para la alineación
+        lineEl.className = 'song-line';
         lineEl.dataset.lineIndex = lineIndex.toString();
 
         const chordsLayer = document.createElement('div');
         chordsLayer.className = 'chords-layer';
 
         const lyricsLayer = document.createElement('div');
-        lyricsLayer.className = 'lyrics-layer'; // <-- Hereda el tamaño grande de 'song-line'
+        lyricsLayer.className = 'lyrics-layer';
         lyricsLayer.textContent = line.lyrics || '\u00A0';
 
         line.chords.forEach((songChord: SongChord) => {
@@ -186,10 +183,7 @@ export function createSongSheet(
             positionerEl.style.left = `${position}ch`;
 
             const visualEl = document.createElement('span');
-            // ==================================================================
-            // AQUÍ ESTÁ LA MAGIA: Hacemos que el texto del acorde vuelva a su tamaño normal
-            visualEl.className = 'chord-visual text-base'; 
-            // ==================================================================
+            visualEl.className = 'chord-visual';
             visualEl.textContent = formatChordName(chord, { style: 'short' }, callbacks.transposition);
             
             if (isAnnotation) {

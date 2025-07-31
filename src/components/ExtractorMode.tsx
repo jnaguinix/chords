@@ -4,15 +4,18 @@ import { TranspositionManager } from '../utils/transposition-manager';
 import { SheetManager } from '../utils/sheet-manager';
 import type { ProcessedSong, SequenceItem, ShowInspectorFn } from '../types';
 import type { AudioEngine } from '../utils/audio';
+// CORRECCIÓN: Se importa AppMode para usarlo en las props
+import type { AppMode } from './Navbar';
 
+// CORRECCIÓN: Se actualiza la interfaz de Props
 interface ExtractorModeProps {
   audioEngine: AudioEngine;
   showInspector: ShowInspectorFn;
   addToComposer: (song: ProcessedSong) => void;
-  isActive: boolean;
+  onModeChange: (mode: AppMode) => void; // Se añade la prop que faltaba
 }
 
-const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspector, addToComposer, isActive }) => {
+const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspector, addToComposer, onModeChange }) => {
   const [songInput, setSongInput] = useState<string>('');
   const [processedSong, setProcessedSong] = useState<ProcessedSong | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -36,10 +39,7 @@ const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspecto
   }, [transpositionOffset]);
 
   useEffect(() => {
-    // CORRECCIÓN #1: Añadimos `processedSong` a las dependencias.
-    // Esto asegura que este código se ejecute de nuevo cuando la canción aparece o desaparece,
-    // permitiendo que `transpositionManager` se cree en el momento correcto.
-    if (transpositionDisplayRef.current && !transpositionManagerRef.current) {
+    if (transpositionDisplayRef.current && !transpositionManagerRef.current && processedSong) {
       transpositionManagerRef.current = new TranspositionManager(
         transpositionDisplayRef.current,
         () => sheetManagerRef.current?.render(processedSongRef.current, transpositionOffsetRef.current)
@@ -121,8 +121,6 @@ const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspecto
     setSongInput('');
     setProcessedSong(null);
     setTranspositionOffset(0);
-    // CORRECCIÓN #2: Reseteamos la referencia al manager.
-    // Esto asegura que se cree uno nuevo la próxima vez que se analice una canción.
     transpositionManagerRef.current = null;
   }, []);
 
@@ -141,8 +139,9 @@ const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspecto
         });
       }
       addToComposer(songForComposer);
+      onModeChange('composer'); // <-- CORRECCIÓN: Cambia al modo compositor
     }
-  }, [processedSong, transpositionOffset, addToComposer]);
+  }, [processedSong, transpositionOffset, addToComposer, onModeChange]);
 
   const handleTransposeUp = useCallback(() => {
     transpositionManagerRef.current?.up();
@@ -154,8 +153,9 @@ const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspecto
     setTranspositionOffset(transpositionManagerRef.current?.getOffset() || 0);
   }, []);
 
+  // CORRECCIÓN: Se elimina el contenedor <main> y la prop 'isActive'
   return (
-    <main id="extractor-mode" className={`${isActive ? 'block' : 'hidden'}`}>
+    <>
       <p className="hidden">Pega la letra y los acordes de una canción. Haz clic en un acorde para ver su diagrama y escucharlo.</p>
       <div className="input-panel">
         <textarea
@@ -192,7 +192,7 @@ const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspecto
 
       <div id="song-output" className="text-left bg-bg-card rounded-xl p-10 mt-6 font-jetbrains overflow-x-auto" ref={songOutputRef}>
       </div>
-    </main>
+    </>
   );
 };
 

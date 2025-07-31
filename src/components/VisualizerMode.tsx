@@ -1,24 +1,24 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { AudioEngine, initAudio } from '../utils/audio';
+import { AudioEngine } from '../utils/audio';
 import { getChordNotes, calculateOptimalPianoRange, formatChordName } from '../utils/chord-utils';
 import { createPiano, populateNoteSelector, populateChordTypeSelector } from '../utils/piano-renderer';
 import { MUSICAL_INTERVALS, INDEX_TO_SHARP_NAME, INDEX_TO_FLAT_NAME, NOTE_TO_INDEX } from '../utils/constants';
-import type { SequenceItem } from '../types';
+import type { SequenceItem, ShowInspectorFn } from '../types';
 
 const EDITABLE_ALTERATIONS = ['b5', '#5', 'b9', '#9', '#11', 'b13'];
 
 interface VisualizerModeProps {
   audioEngine: AudioEngine;
-  isActive: boolean;
+  showInspector: ShowInspectorFn;
 }
 
-const VisualizerMode: React.FC<VisualizerModeProps> = ({ audioEngine, isActive }) => {
+const VisualizerMode: React.FC<VisualizerModeProps> = ({ audioEngine, showInspector }) => {
   const [rootNote, setRootNote] = useState<string>('C');
   const [chordType, setChordType] = useState<string>('Mayor');
   const [bassNote, setBassNote] = useState<string | undefined>(undefined);
   const [inversion, setInversion] = useState<number>(0);
   const [alterations, setAlterations] = useState<string[]>([]);
-  const [chordNameDisplay, setChordNameDisplay] = useState<string>('');
+  const [currentChord, setCurrentChord] = useState<SequenceItem>({ rootNote: 'C', type: 'Mayor' });
 
   const pianoContainerRef = useRef<HTMLDivElement>(null);
   const rootNoteSelectRef = useRef<HTMLSelectElement>(null);
@@ -26,32 +26,38 @@ const VisualizerMode: React.FC<VisualizerModeProps> = ({ audioEngine, isActive }
   const bassNoteSelectRef = useRef<HTMLSelectElement>(null);
   const inversionSelectRef = useRef<HTMLSelectElement>(null);
 
-  const handlePlayChord = useCallback(async () => {
-    await initAudio();
-    const currentChord: SequenceItem = {
+  // Se actualiza el objeto del acorde cada vez que cambia una de sus partes
+  useEffect(() => {
+    setCurrentChord({
       rootNote,
       type: chordType,
       bassNote: bassNote === 'none' ? undefined : bassNote,
       inversion,
       alterations,
-    };
+    });
+  }, [rootNote, chordType, bassNote, inversion, alterations]);
+
+  const handlePlayChord = useCallback(async () => {
     audioEngine.playChord(currentChord);
-  }, [rootNote, chordType, bassNote, inversion, alterations, audioEngine]);
+  }, [currentChord, audioEngine]);
+
+  // ========================================================================
+  // CORRECCIÓN: Esta función ahora se usa en el JSX para abrir el inspector.
+  // ========================================================================
+  const handleChordNameClick = useCallback(() => {
+    showInspector(currentChord, {
+      onUpdate: (updatedItem) => {
+        // Actualiza el visualizador con los cambios del inspector
+        setRootNote(updatedItem.rootNote);
+        setChordType(updatedItem.type);
+        setBassNote(updatedItem.bassNote);
+        setInversion(updatedItem.inversion || 0);
+        setAlterations(updatedItem.alterations || []);
+      }
+    });
+  }, [currentChord, showInspector]);
 
   useEffect(() => {
-    const currentChord: SequenceItem = {
-      rootNote,
-      type: chordType,
-      bassNote: bassNote === 'none' ? undefined : bassNote,
-      inversion,
-      alterations,
-    };
-    
-    // ========================================================================
-    // MODIFICACIÓN: Cambiamos 'long' por 'short' para usar el cifrado.
-    // ========================================================================
-    setChordNameDisplay(formatChordName(currentChord, { style: 'short' }));
-
     if (pianoContainerRef.current) {
       const { notesToPress, bassNoteIndex, allNotesForRange } = getChordNotes(currentChord);
 
@@ -70,7 +76,7 @@ const VisualizerMode: React.FC<VisualizerModeProps> = ({ audioEngine, isActive }
         );
       }
     }
-  }, [rootNote, chordType, bassNote, inversion, alterations, audioEngine]);
+  }, [currentChord, audioEngine]);
 
   useEffect(() => {
     const allNotes = [...new Set([...INDEX_TO_SHARP_NAME, ...INDEX_TO_FLAT_NAME])].sort((a, b) => NOTE_TO_INDEX[a] - NOTE_TO_INDEX[b] || a.localeCompare(b));
@@ -115,7 +121,7 @@ const VisualizerMode: React.FC<VisualizerModeProps> = ({ audioEngine, isActive }
   }, [rootNote, chordType, inversion]);
 
   return (
-    <main className={`${isActive ? 'block' : 'hidden'}`}>
+    <>
       <div className="selector-panel">
         <div className="selector">
           <label className="selector-label" htmlFor="root-note-select">NOTA RAÍZ</label>
@@ -154,12 +160,15 @@ const VisualizerMode: React.FC<VisualizerModeProps> = ({ audioEngine, isActive }
         </button>
       </div>
 
-      <h2 className="chord-label">{chordNameDisplay}</h2>
+      {/* CORRECCIÓN: Se añade el evento onClick a este elemento */}
+      <h2 className="chord-label" onClick={handleChordNameClick} style={{ cursor: 'pointer' }} title="Click para editar">
+        {formatChordName(currentChord, { style: 'short' })}
+      </h2>
       
       <div className="flex justify-center" ref={pianoContainerRef}>
         {/* El piano se renderiza aquí */}
       </div>
-    </main>
+    </>
   );
 };
 
