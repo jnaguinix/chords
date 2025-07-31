@@ -217,3 +217,64 @@ select.selector-box {
     width: 60%; /* Ajustar el ancho de las teclas negras a una proporción más adecuada */
     height: 60%; /* Ajustar la altura de las teclas negras a una proporción más adecuada */
 }
+/* ======================================================================== */
+/* Estilos para el Modal Flotante de Sugerencias (Adaptado a tu CSS)        */
+/* ======================================================================== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6); /* Fondo semitransparente oscuro */
+  z-index: 100;
+}
+
+.draggable-modal {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 101;
+}
+
+.modal-header {
+  user-select: none; /* Evita que el texto se seleccione al arrastrar */
+}
+
+.modal-header:active {
+  cursor: grabbing; /* Cambia el cursor cuando se está arrastrando */
+}
+
+/* Ajuste para que el botón de cerrar del modal herede el estilo del inspector */
+.draggable-modal .btn-close-modal {
+    color: #ffffffff;
+    opacity: 0.7;
+}
+.draggable-modal .btn-close-modal:hover {
+    opacity: 1;
+}
+
+/* ======================================================================== */
+/* NUEVOS ESTILOS DE COLOR (Basado en tu feedback)                          */
+/* ======================================================================== */
+
+/* Hace que el título del modal sea blanco para un mejor contraste */
+.modal-header .modal-title {
+    color: white;
+}
+
+/* Hace que el nombre del acorde sugerido sea azul, igual que en la partitura */
+.suggestion-item .suggestion-chord {
+    color: #6cb2f7; /* Este es el color azul de tus acordes en .chord-visual */
+    font-weight: bold;
+}
+
+
+.suggestion-item {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.suggestion-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}

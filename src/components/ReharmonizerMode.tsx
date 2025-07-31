@@ -5,7 +5,8 @@ import { formatChordName } from '../utils/chord-utils';
 import { INDEX_TO_SHARP_NAME } from '../utils/constants';
 import { SheetManager } from '../utils/sheet-manager';
 import type { AudioEngine } from '../utils/audio';
-
+// Se importa el nuevo modal
+import DraggableModal from './DraggableModal';
 
 const ALL_KEYS: DetectedKey[] = [];
 for (let i = 0; i < 12; i++) {
@@ -26,7 +27,6 @@ const ReharmonizerMode: React.FC<ReharmonizerModeProps> = ({ song, audioEngine, 
     const [isSuggestionModalVisible, setSuggestionModalVisible] = useState(false);
     const [nextChordId, setNextChordId] = useState<number>(1);
     const [activeChord, setActiveChord] = useState<SequenceItem | null>(null);
-    // CORRECCIÓN: El contexto de inserción ahora también guardará la posición del clic.
     const [insertionContext, setInsertionContext] = useState<{lineIndex: number, charIndex: number, prevChord: SequenceItem, nextChord: SequenceItem} | null>(null);
 
     const songSheetRef = useRef<HTMLDivElement>(null);
@@ -127,7 +127,6 @@ const ReharmonizerMode: React.FC<ReharmonizerModeProps> = ({ song, audioEngine, 
         const nextChord = lineChords.find(c => c.position >= charIndex)?.chord;
 
         if (prevChord && nextChord) {
-            // CORRECCIÓN: Guardamos la posición exacta del clic en el contexto.
             setInsertionContext({lineIndex, charIndex, prevChord, nextChord});
             const suggestions = IntelliHarmonix.getPassingChordSuggestions(prevChord, nextChord, currentKey);
             setActiveSuggestions(suggestions);
@@ -143,7 +142,6 @@ const ReharmonizerMode: React.FC<ReharmonizerModeProps> = ({ song, audioEngine, 
             updateChordInSong({ ...suggestedChord, id: activeChord.id });
         } else if (insertionContext) {
             const { lineIndex, charIndex } = insertionContext;
-            // CORRECCIÓN: Usamos la posición del clic guardada (charIndex) en lugar de calcular el punto medio.
             addChordToSongData({ ...suggestedChord, id: nextChordId }, { lineIndex, charIndex });
             setNextChordId(prevId => prevId + 1);
         }
@@ -174,23 +172,14 @@ const ReharmonizerMode: React.FC<ReharmonizerModeProps> = ({ song, audioEngine, 
                 {!currentSong && <p className="text-text-muted p-4">Carga una canción desde el Compositor para empezar a rearmonizar.</p>}
             </div>
 
-            {isSuggestionModalVisible && (
-                <div className="suggestion-modal-overlay" onClick={() => setSuggestionModalVisible(false)}>
-                    <div className="suggestion-modal" onClick={e => e.stopPropagation()}>
-                        <h3>Sugerencias de Rearmonización</h3>
-                        <ul className="suggestions-list">
-                            {activeSuggestions.length > 0 ? activeSuggestions.map((s, i) => (
-                                <li key={i} className="suggestion-item" onClick={() => handleSuggestionClick(s.chord)}>
-                                    <strong className="suggestion-chord">{formatChordName(s.chord, { style: 'short' })}</strong>
-                                    <span className="suggestion-technique">({s.technique})</span>
-                                    <p className="suggestion-justification">{s.justification}</p>
-                                </li>
-                            )) : <p>No se encontraron sugerencias para este contexto.</p>}
-                        </ul>
-                        <button onClick={() => setSuggestionModalVisible(false)} className="btn-close-modal-reharm">Cerrar</button>
-                    </div>
-                </div>
-            )}
+            {/* Se reemplaza el panel antiguo por el nuevo modal */}
+            <DraggableModal
+                isVisible={isSuggestionModalVisible}
+                onClose={() => setSuggestionModalVisible(false)}
+                suggestions={activeSuggestions}
+                onSuggestionClick={handleSuggestionClick}
+                activeChord={activeChord}
+            />
         </div>
     );
 };
