@@ -13,9 +13,10 @@ interface ExtractorModeProps {
   showInspector: ShowInspectorFn;
   addToComposer: (song: ProcessedSong) => void;
   onModeChange: (mode: AppMode) => void; // Se añade la prop que faltaba
+  onSendToReharmonizer: (song: ProcessedSong) => void;
 }
 
-const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspector, addToComposer, onModeChange }) => {
+const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspector, addToComposer, onModeChange, onSendToReharmonizer }) => {
   const [songInput, setSongInput] = useState<string>('');
   const [processedSong, setProcessedSong] = useState<ProcessedSong | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -148,11 +149,6 @@ const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspecto
     setTranspositionOffset(transpositionManagerRef.current?.getOffset() || 0);
   }, []);
 
-  const handleTransposeDown = useCallback(() => {
-    transpositionManagerRef.current?.down();
-    setTranspositionOffset(transpositionManagerRef.current?.getOffset() || 0);
-  }, []);
-
   // CORRECCIÓN: Se elimina el contenedor <main> y la prop 'isActive'
   return (
     <>
@@ -168,14 +164,24 @@ const ExtractorMode: React.FC<ExtractorModeProps> = ({ audioEngine, showInspecto
         
         <div className="button-row">
           <div className="main-actions-group">
-            <button id="process-song-btn" className="btn-azul" onClick={handleProcessSong}>Analizar</button>
-            <button id="add-to-composer-btn" className="btn-verde" onClick={handleAddToComposer} disabled={!processedSong || processedSong.allChords.length === 0}>Añadir al Compositor</button>
-            <button id="clear-extractor-btn" className="btn-rojo" onClick={handleClearExtractor}>Limpiar</button>
+            <button id="process-song-btn" className="btn-azul flex-1" onClick={handleProcessSong}>Analizar</button>
+            <button id="add-to-composer-btn" className="btn-verde flex-1" onClick={handleAddToComposer} disabled={!processedSong || processedSong.allChords.length === 0}>Compositor</button>
+            <button id="clear-extractor-btn" className="btn-rojo flex-1" onClick={handleClearExtractor}>Limpiar</button>
+            <button 
+              id="send-to-reharmonizer-btn" 
+              className="btn-orange flex-1" 
+              onClick={() => {
+                console.log("Sending to Reharmonizer:", processedSong);
+                onSendToReharmonizer(processedSong!);
+              }} 
+              disabled={!processedSong || processedSong.allChords.length === 0}
+            >
+              Rearmonizar
+            </button>
           </div>
           
           {processedSong && processedSong.allChords.length > 0 && (
             <div id="transposition-controls" className="transposition-controls-group">
-              <button id="transpose-down-btn" className="btn-control" onClick={handleTransposeDown}>-</button>
               <div id="transposition-display" ref={transpositionDisplayRef} className="transposition-display-segment">Original</div>
               <button id="transpose-up-btn" className="btn-control" onClick={handleTransposeUp}>+</button>
             </div>

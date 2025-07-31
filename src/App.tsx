@@ -58,6 +58,7 @@ function App() {
   };
 
   const handleSendToReharmonizer = (song: ProcessedSong) => {
+    console.log("handleSendToReharmonizer called with song:", song);
     setSongForReharmonizer(song);
     setActiveMode('reharmonizer');
   };
@@ -75,6 +76,7 @@ function App() {
             showInspector={showInspector}
             addToComposer={setSongForComposer}
             onModeChange={setActiveMode}
+            onSendToReharmonizer={handleSendToReharmonizer}
           />
         );
       case 'composer':
