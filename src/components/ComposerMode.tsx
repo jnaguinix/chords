@@ -228,7 +228,7 @@ const ComposerMode: React.FC<ComposerModeProps> = ({ initialSong, audioEngine, s
             ref={composerPianoDisplayRef}>
           </div>
         </div>
-        <div className="composer-controls">
+        <div className="composer-controls pr-4">
           <div className="transposition-controls-group">
             <button className="btn-control" onClick={handleTransposeDown}>-</button>
             <div ref={transpositionDisplayRef} className="transposition-display-segment">Original</div>
