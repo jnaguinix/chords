@@ -2,7 +2,7 @@
 ================================================================================
 |                     src/utils/reharmonization-engine.ts                      |
 |                El Cerebro Musical - Motor de Rearmonización                  |
-|                      (Versión con Refinamientos Lógicos)                     |
+|                   (Versión con Análisis Armónico Avanzado)                   |
 ================================================================================
 */
 
@@ -18,6 +18,9 @@ const MINOR_SCALE_INTERVALS = [0, 2, 3, 5, 7, 8, 10];
 const MAJOR_SCALE_DEGREES = ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°'];
 const MINOR_SCALE_DEGREES = ['i', 'ii°', 'bIII', 'iv', 'v', 'bVI', 'bVII'];
 
+// ========================================================================
+// REFINAMIENTO PRINCIPAL: La función `analyzeChordContext` ahora es mucho más inteligente.
+// ========================================================================
 function analyzeChordContext(chord: SequenceItem, detectedKey: DetectedKey): ChordAnalysis | null {
     if (!chord || !chord.rootNote) return null;
     const rootIndex = NOTE_TO_INDEX[chord.rootNote];
@@ -36,7 +39,7 @@ function analyzeChordContext(chord: SequenceItem, detectedKey: DetectedKey): Cho
         return 'Transition';
     };
 
-    // 1. Búsqueda de Grado Diatónico
+    // Paso 1: Búsqueda de Grado Diatónico (el caso más común)
     const scaleIntervals = isMajorKey ? MAJOR_SCALE_INTERVALS : MINOR_SCALE_INTERVALS;
     const scaleDegrees = isMajorKey ? MAJOR_SCALE_DEGREES : MINOR_SCALE_DEGREES;
     const degreeIndex = scaleIntervals.indexOf(interval);
@@ -44,8 +47,26 @@ function analyzeChordContext(chord: SequenceItem, detectedKey: DetectedKey): Cho
     if (degreeIndex !== -1) {
         degreeInfo = { degree: (degreeIndex + 1).toString(), roman: scaleDegrees[degreeIndex] };
     } else {
-        // Análisis de acordes no diatónicos (Dominantes Secundarios)
-        if (chord.type === '7 (Dominante)') {
+        // Si no es diatónico, empieza la búsqueda avanzada.
+        // Paso 2: Búsqueda de Acordes de Intercambio Modal (si estamos en tonalidad Mayor)
+        if (isMajorKey) {
+            const modalInterchangeMap: { [interval: number]: { roman: string, type?: string } } = {
+                3: { roman: 'bIIImaj7' }, // ej. Ebmaj7 en C Mayor
+                5: { roman: 'iv', type: 'Menor' }, // ej. Fm o Fm7 en C Mayor
+                8: { roman: 'bVImaj7' }, // ej. Abmaj7 en C Mayor
+                10: { roman: 'bVII7', type: '7 (Dominante)' } // ej. Bb7 en C Mayor
+            };
+            const foundInterchange = modalInterchangeMap[interval];
+            if (foundInterchange) {
+                // Verificamos que el tipo de acorde coincida para mayor precisión
+                if (!foundInterchange.type || chord.type.startsWith(foundInterchange.type)) {
+                    degreeInfo = { degree: foundInterchange.roman, roman: foundInterchange.roman };
+                }
+            }
+        }
+
+        // Paso 3: Búsqueda de Dominantes Secundarios (si aún no se ha encontrado)
+        if (!degreeInfo && chord.type === '7 (Dominante)') {
             for (let i = 0; i < scaleIntervals.length; i++) {
                 const diatonicRoot = (keyRootIndex + scaleIntervals[i]) % 12;
                 const dominantOfDiatonic = (diatonicRoot + 7) % 12;
@@ -68,6 +89,7 @@ function analyzeChordContext(chord: SequenceItem, detectedKey: DetectedKey): Cho
         };
     }
     
+    // Si después de todas las búsquedas no se encuentra, se marca como no analizado.
     return { ...chord, analysis: null };
 }
 
@@ -303,10 +325,8 @@ class IntelliHarmonixEngine {
         const prevRootIndex = NOTE_TO_INDEX[prevChord.rootNote];
         const nextRootIndex = NOTE_TO_INDEX[nextChord.rootNote];
 
-        // Regla 1: Dominante Secundario (la más común y fuerte)
         suggestions.push(...this.getSecondaryDominants(nextChord));
 
-        // Regla 2: Aproximación Cromática
         if (prevRootIndex !== undefined && nextRootIndex !== undefined) {
             if ((prevRootIndex + 2) % 12 === nextRootIndex) {
                 const passingRoot = transposeNote(prevChord.rootNote, 1);
@@ -321,41 +341,28 @@ class IntelliHarmonixEngine {
             }
         }
         
-        // ========================================================================
-        // CORRECCIÓN: Se elimina la variable sin usar y se reemplaza por una
-        // lógica más robusta y musicalmente correcta.
-        // ========================================================================
-
-        // Regla 3: Conexión por Bajo de Paso (Inversiones)
-        if (prevRootIndex !== undefined && nextRootIndex !== undefined && prevChord.analysis) {
-            // Caso 1: I -> I/3 -> vi (ej. D -> D/F# -> Bm)
-            if (prevChord.analysis.roman === 'I' && nextChord.analysis.roman === 'vi') {
-                const thirdOfPrev = transposeNote(prevChord.rootNote, 4);
-                const passingChord = parseChordString(`${prevChord.rootNote}/${thirdOfPrev}`);
-                if (passingChord) {
-                    suggestions.push({
-                        chord: passingChord,
-                        technique: 'Bajo de Paso por Inversión',
-                        justification: `Usa I en 1ra inversión (${formatChordName(passingChord, {style: 'short'})}) para un bajo melódico.`
-                    });
-                }
+        if (prevChord.analysis?.roman === 'I' && nextChord.analysis.roman === 'vi') {
+            const thirdOfPrev = transposeNote(prevChord.rootNote, 4);
+            const passingChord = parseChordString(`${prevChord.rootNote}/${thirdOfPrev}`);
+            if (passingChord) {
+                suggestions.push({
+                    chord: passingChord,
+                    technique: 'Bajo de Paso por Inversión',
+                    justification: `Usa I en 1ra inversión (${formatChordName(passingChord, {style: 'short'})}) para un bajo melódico.`
+                });
             }
-            // Caso 2: I -> V/3 -> vi (ej. D -> A/C# -> Bm)
-            if (prevChord.analysis.roman === 'I' && nextChord.analysis.roman === 'vi') {
-                 const dominantOfPrev = transposeNote(prevChord.rootNote, 7);
-                 const thirdOfDominant = transposeNote(dominantOfPrev, 4);
-                 const passingChord = parseChordString(`${dominantOfPrev}7/${thirdOfDominant}`);
-                 if (passingChord) {
-                     suggestions.push({
-                         chord: passingChord,
-                         technique: 'Bajo de Paso Cromático',
-                         justification: `Usa el V7 en 1ra inversión (${formatChordName(passingChord, {style: 'short'})}) para conectar.`
-                     });
-                 }
-            }
+             const dominantOfPrev = transposeNote(prevChord.rootNote, 7);
+             const thirdOfDominant = transposeNote(dominantOfPrev, 4);
+             const passingChordV7 = parseChordString(`${dominantOfPrev}7/${thirdOfDominant}`);
+             if (passingChordV7) {
+                 suggestions.push({
+                     chord: passingChordV7,
+                     technique: 'Bajo de Paso Cromático',
+                     justification: `Usa el V7 en 1ra inversión (${formatChordName(passingChordV7, {style: 'short'})}) para conectar.`
+                 });
+             }
         }
         
-        // Regla 4: II-V Relacionado
         if (!['I', 'i', 'vii°'].includes(nextChord.analysis.roman)) {
             const targetRoot = nextChord.rootNote;
             const relatedTwoRoot = transposeNote(targetRoot, 2);
