@@ -1,0 +1,34 @@
+/* Estilos para el layout del modo Editor */
+.app-container-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  /* El color de fondo se hereda del body */
+}
+
+/* El contenido principal (el editor) debe crecer para ocupar el espacio sobrante */
+.app-container-editor .main-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  display: flex;
+}
+
+/* El editor de CodeMirror debe ocupar todo el espacio de su contenedor */
+.app-container-editor .main-content > div {
+  flex-grow: 1;
+}
+
+/* Estilos para el contenedor del piano */
+.piano-header-container {
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-bottom: 1px solid #27272a; /* Borde ligeramente más claro */
+  min-height: 120px;
+}
+
+/* Estilos generales (si los hubiera) se mantendrían en .app-container */
+.app-container {
+  /* Aquí irían los estilos que sí son comunes a todos los modos */
+}

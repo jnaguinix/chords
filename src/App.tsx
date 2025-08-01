@@ -1,17 +1,26 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Navbar from './components/Navbar';
 import type { AppMode } from './components/Navbar';
 import VisualizerMode from './components/VisualizerMode';
-import ExtractorMode from './components/ExtractorMode';
-import ComposerMode from './components/ComposerMode';
+import SongEditor from './components/SongEditor';
 import ReharmonizerMode from './components/ReharmonizerMode';
 import ChordInspectorModal from './components/ChordInspectorModal';
+import PianoDisplay from './components/PianoDisplay';
 import { AudioEngine, initAudio } from './utils/audio';
+import { TranspositionManager } from './utils/transposition-manager'; // ✅ Importar TranspositionManager
 import type { SequenceItem, ProcessedSong, InspectorCallbacks, ShowInspectorFn } from './types';
 import './App.css';
 
+const sampleSong = `
+[Verse 1]
+      C           G
+This is a sample song
+      Am          F
+With some chords to play along
+`;
+
 function App() {
-  const [activeMode, setActiveMode] = useState<AppMode>('visualizer');
+  const [activeMode, setActiveMode] = useState<AppMode>('editor');
   const [audioEngine, setAudioEngine] = useState<AudioEngine | null>(null);
   const [isAudioInitialized, setIsAudioInitialized] = useState(false);
   
@@ -19,13 +28,32 @@ function App() {
   const [inspectorItem, setInspectorItem] = useState<SequenceItem | null>(null);
   const [inspectorCallbacks, setInspectorCallbacks] = useState<InspectorCallbacks>({});
 
-  const [songForComposer, setSongForComposer] = useState<ProcessedSong | null>(null);
   const [songForReharmonizer, setSongForReharmonizer] = useState<ProcessedSong | null>(null);
+  const [activeChord, setActiveChord] = useState<SequenceItem | null>(null);
+  const [transpositionOffset, setTranspositionOffset] = useState<number>(0);
+
+  // ✅ Referencias para el TranspositionManager
+  const displayRef = useRef<HTMLDivElement>(null);
+  const transpositionManagerRef = useRef<TranspositionManager | null>(null);
 
   useEffect(() => {
     const engine = new AudioEngine();
     setAudioEngine(engine);
   }, []);
+
+  // ✅ Inicializar TranspositionManager cuando el display esté disponible
+  useEffect(() => {
+    if (displayRef.current && !transpositionManagerRef.current && activeMode === 'editor') {
+      transpositionManagerRef.current = new TranspositionManager(
+        displayRef.current,
+        () => {
+          // Callback que sincroniza con React state
+          const newOffset = transpositionManagerRef.current?.getOffset() || 0;
+          setTranspositionOffset(newOffset);
+        }
+      );
+    }
+  }, [activeMode]);
 
   const handleFirstInteraction = useCallback(async () => {
     if (!isAudioInitialized) {
@@ -34,7 +62,6 @@ function App() {
       console.log("Audio Engine Initialized on user interaction.");
     }
   }, [isAudioInitialized]);
-
 
   const showInspector: ShowInspectorFn = (item, callbacks = {}) => {
     setInspectorItem(item);
@@ -58,10 +85,23 @@ function App() {
   };
 
   const handleSendToReharmonizer = (song: ProcessedSong) => {
-    console.log("handleSendToReharmonizer called with song:", song);
     setSongForReharmonizer(song);
     setActiveMode('reharmonizer');
   };
+
+  // ✅ Usar TranspositionManager en lugar de state directo
+  const handleTransposeUp = useCallback(() => {
+    transpositionManagerRef.current?.up();
+  }, []);
+
+  const handleTransposeDown = useCallback(() => {
+    transpositionManagerRef.current?.down();
+  }, []);
+
+  // ✅ Función para resetear (opcional)
+  const handleTransposeReset = useCallback(() => {
+    transpositionManagerRef.current?.reset();
+  }, []);
 
   const renderActiveMode = () => {
     if (!audioEngine) return <div>Cargando motor de audio...</div>;
@@ -69,28 +109,16 @@ function App() {
     switch (activeMode) {
       case 'visualizer':
         return <VisualizerMode audioEngine={audioEngine} showInspector={showInspector} />;
-      case 'extractor':
-        return (
-          <ExtractorMode
-            audioEngine={audioEngine}
-            showInspector={showInspector}
-            addToComposer={setSongForComposer}
-            onModeChange={setActiveMode}
-            onSendToReharmonizer={handleSendToReharmonizer}
-          />
-        );
-      case 'composer':
-        return (
-          <ComposerMode
-            initialSong={songForComposer}
-            audioEngine={audioEngine}
-            showInspector={showInspector}
-            onSendToReharmonizer={handleSendToReharmonizer}
-          />
-        );
+      case 'editor':
+        return <SongEditor 
+                  initialDoc={sampleSong} 
+                  audioEngine={audioEngine} 
+                  showInspector={showInspector} 
+                  onChordHover={setActiveChord} 
+                  transpositionOffset={transpositionOffset}
+                  onSendToReharmonizer={handleSendToReharmonizer}
+               />;
       case 'reharmonizer':
-        // CORRECCIÓN: Se añaden las props 'audioEngine' y 'showInspector'
-        // que faltaban para que el SheetManager funcione correctamente.
         return (
           <ReharmonizerMode
             song={songForReharmonizer}
@@ -104,11 +132,42 @@ function App() {
   };
 
   return (
-    <div className="app-container" onClick={handleFirstInteraction}>
+    <div className={`${activeMode === 'editor' ? 'app-container-editor' : 'app-container'} bg-dark-main`} onClick={handleFirstInteraction}>
       <Navbar activeMode={activeMode} onModeChange={setActiveMode} />
+
+      {/* El piano y los controles de transposición solo se muestran en el modo editor */}
+      {activeMode === 'editor' && (
+        <>
+          <div className="piano-header-container">
+            <PianoDisplay chord={activeChord} transpositionOffset={transpositionOffset} />
+          </div>
+          {/* ✅ Controles de transposición con TranspositionManager */}
+          <div className="transposition-controls-group mb-4">
+            <button className="btn-control" onClick={handleTransposeDown}>-</button>
+            {/* ✅ El display ahora usa ref para conectar con TranspositionManager */}
+            <div 
+              ref={displayRef}
+              className="transposition-display-segment"
+            >
+              Original
+            </div>
+            <button className="btn-control" onClick={handleTransposeUp}>+</button>
+            {/* ✅ Botón de reset opcional */}
+            <button 
+              className="btn-control reset-btn" 
+              onClick={handleTransposeReset}
+              style={{ marginLeft: '10px', fontSize: '12px' }}
+            >
+              Reset
+            </button>
+          </div>
+        </>
+      )}
+
       <main className="main-content">
         {renderActiveMode()}
       </main>
+
       {audioEngine && (
         <ChordInspectorModal
           isVisible={inspectorVisible}
