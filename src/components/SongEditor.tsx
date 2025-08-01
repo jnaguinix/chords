@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { EditorView, ViewUpdate } from '@codemirror/view';
 import { EditorState, StateEffect } from '@codemirror/state';
 import { HighlightStyle, StreamLanguage, syntaxHighlighting } from '@codemirror/language';
@@ -34,8 +34,8 @@ const chordHighlightStyle = HighlightStyle.define([
 ]);
 
 const editorTheme = EditorView.theme({
-  '&': { fontSize: '22px', fontFamily: 'monospace', backgroundColor: '#34495e', color: '#f8fafc' },
-  '.cm-chord': { color: '#60a5fa', fontWeight: 'bold', cursor: 'pointer', padding: '2px 5px', borderRadius: '3px', '&:hover': { backgroundColor: '#27272a' }, fontSize: '1.2em' },
+  '&': { fontSize: '32px', fontFamily: 'monospace', backgroundColor: '#34495e', color: '#f8fafc', lineHeight: '1.1' },
+  '.cm-chord': { color: '#60a5fa', fontWeight: 'bold', cursor: 'pointer', padding: '0px 5px', borderRadius: '3px', '&:hover': { backgroundColor: '#27272a' }, fontSize: '0.86em' },
   '.cm-lyric': { color: '#f8fafc' },
 });
 
@@ -200,6 +200,9 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
   const longPressTimeoutRef = useRef<number | null>(null);
   const initializedRef = useRef<boolean>(false);
 
+  // Internal state to hold the untransposed version of the song
+  const [untransposedDoc, setUntransposedDoc] = useState(initialDoc);
+
   const clearLongPressTimeout = useCallback(() => {
     if (longPressTimeoutRef.current) {
       clearTimeout(longPressTimeoutRef.current);
@@ -207,17 +210,23 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
     }
   }, []);
 
-  // Crear el editor solo una vez
+  // Effect to initialize the editor and untransposedDoc
   useEffect(() => {
     if (editorRef.current && !viewRef.current && !initializedRef.current) {
       const startState = EditorState.create({
-        doc: initialDoc,
+        doc: initialDoc, // Initialize with initialDoc
         extensions: [
           chordLanguage,
           syntaxHighlighting(chordHighlightStyle),
           editorTheme,
           chordInteractionPlugin(audioEngine, showInspector, transpositionOffset, longPressTimeoutRef, clearLongPressTimeout, onChordHover),
           cursorChordDetector(onChordHover, transpositionOffset),
+          // Listen for editor changes to update untransposedDoc
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) {
+              setUntransposedDoc(update.state.doc.toString());
+            }
+          }),
         ],
       });
 
@@ -226,7 +235,6 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
       initializedRef.current = true;
     }
 
-    // Cleanup solo cuando el componente se desmonte completamente
     return () => {
       if (!editorRef.current) {
         viewRef.current?.destroy();
@@ -234,9 +242,57 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
         initializedRef.current = false;
       }
     };
-  }, []); // ✅ Solo se ejecuta una vez
+  }, [initialDoc]); // Depend on initialDoc for initial setup
 
-  // Manejar cambios en las props (excepto initialDoc)
+  // Effect to handle changes in transpositionOffset
+  useEffect(() => {
+    if (viewRef.current && initializedRef.current) {
+      let newDisplayedDoc = '';
+      const lines = untransposedDoc.split('\n'); // Use the untransposed version
+
+      newDisplayedDoc = lines.map(line => {
+        if (chordLineRegex.test(line)) {
+          let transposedLine = '';
+          let lastIndex = 0;
+          const matches = [...line.matchAll(/[A-G](b|#)?(m|maj|min|dim|aug|add|sus)?[0-9]?(\s*\([^)]*\))?(\/[A-G](b|#)?)?/g)];
+
+          for (const match of matches) {
+            const chordText = match[0];
+            const startIndex = match.index;
+
+            if (startIndex !== undefined) {
+              transposedLine += line.substring(lastIndex, startIndex);
+              lastIndex = startIndex + chordText.length;
+
+              const parsedChord = parseChordString(chordText);
+              if (parsedChord) {
+                const transposedChord = { ...parsedChord };
+                // Apply the absolute transposition offset to the untransposed chord
+                transposedChord.rootNote = transposeNote(parsedChord.rootNote, transpositionOffset);
+                if (parsedChord.bassNote) {
+                  transposedChord.bassNote = transposeNote(parsedChord.bassNote, transpositionOffset);
+                }
+                transposedLine += formatChordName(transposedChord, { style: 'short' });
+              } else {
+                transposedLine += chordText;
+              }
+            }
+          }
+          transposedLine += line.substring(lastIndex);
+          return transposedLine;
+        }
+        return line;
+      }).join('\n');
+
+      if (viewRef.current.state.doc.toString() !== newDisplayedDoc) {
+        viewRef.current.dispatch({
+          changes: { from: 0, to: viewRef.current.state.doc.length, insert: newDisplayedDoc }
+        });
+      }
+    }
+  }, [transpositionOffset, untransposedDoc, viewRef, initializedRef]); // Depend on untransposedDoc and transpositionOffset
+
+  // Manejar cambios en las props (excepto initialDoc) for extensions
   useEffect(() => {
     if (viewRef.current) {
       viewRef.current.dispatch({
@@ -250,18 +306,6 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
       });
     }
   }, [audioEngine, showInspector, onChordHover, transpositionOffset, clearLongPressTimeout]);
-
-  // Manejar cambios en initialDoc sin destruir el editor
-  useEffect(() => {
-    if (viewRef.current && initializedRef.current) {
-      const currentDoc = viewRef.current.state.doc.toString();
-      if (currentDoc !== initialDoc) {
-        viewRef.current.dispatch({
-          changes: { from: 0, to: viewRef.current.state.doc.length, insert: initialDoc }
-        });
-      }
-    }
-  }, [initialDoc]);
 
   // Event listener global para mouseup
   useEffect(() => {
