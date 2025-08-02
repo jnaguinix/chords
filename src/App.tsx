@@ -12,11 +12,11 @@ import type { SequenceItem, ProcessedSong, InspectorCallbacks, ShowInspectorFn }
 import './App.css';
 
 const sampleSong = `
-[Verse 1]
-      C           G
-This is a sample song
-      Am          F
-With some chords to play along
+[Verso 1]
+      Am          F      C               G 
+Ejemplo de Cancioncita, solo debes añadir la letra de la cancion
+  Am7          Fmaj7                   C/E       G/B
+Y poner encima los acordes, no es nada complicado o si
 `;
 
 function App() {

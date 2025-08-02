@@ -16,7 +16,7 @@ const chordLanguage = StreamLanguage.define({
       stream.skipToEnd();
       return 'lyric';
     }
-    if (stream.match(/[A-G](b|#)?(m|maj|min|dim|aug|add|sus)?[0-9]?(\s*\([^)]*\))?(\/[A-G](b|#)?)?/)) {
+    if (stream.match(/[A-G](b|#)?[a-zA-Z0-9#b/()]*(\s*\([^)]*\))?(\/[A-G](b|#)?)?/)) {
       return 'chord';
     }
     stream.next();
@@ -34,7 +34,7 @@ const chordHighlightStyle = HighlightStyle.define([
 ]);
 
 const editorTheme = EditorView.theme({
-  '&': { fontSize: '32px', fontFamily: 'monospace', backgroundColor: '#34495e', color: '#f8fafc', lineHeight: '1.1' },
+  '&': { fontSize: '32px', fontFamily: 'monospace', backgroundColor: '#1e1e1e', color: '#f8fafc', lineHeight: '1.1' },
   '.cm-chord': { color: '#60a5fa', fontWeight: 'bold', cursor: 'pointer', padding: '0px 5px', borderRadius: '3px', '&:hover': { backgroundColor: '#27272a' }, fontSize: '0.86em' },
   '.cm-lyric': { color: '#f8fafc' },
 });
@@ -316,7 +316,7 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
     return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
   }, [clearLongPressTimeout]);
 
-  return <div ref={editorRef} style={{ border: '1px solid #ccc', minHeight: '400px' }} />;
+  return <div ref={editorRef} style={{ minHeight: '400px' }} />;
 };
 
 export default SongEditor;
