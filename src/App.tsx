@@ -132,7 +132,7 @@ function App() {
   };
 
   return (
-    <div className={`${activeMode === 'editor' ? 'app-container-editor' : 'app-container'} bg-dark-main`} onClick={handleFirstInteraction}>
+    <div className="flex flex-col h-screen bg-dark-main" onClick={handleFirstInteraction}>
       <Navbar activeMode={activeMode} onModeChange={setActiveMode} />
 
       {/* El piano y los controles de transposición solo se muestran en el modo editor */}
