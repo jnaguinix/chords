@@ -3,6 +3,8 @@
 /* ============================================ */
 body {
   @apply bg-dark-main text-light-main font-fira;
+  caret-color: green;
+  caret-shape: block;
 }
 
 /* --- Estilos de la Navegación --- */

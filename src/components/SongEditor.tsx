@@ -35,6 +35,13 @@ const chordHighlightStyle = HighlightStyle.define([
 
 const editorTheme = EditorView.theme({
   '&': { fontSize: '32px', fontFamily: 'monospace', backgroundColor: '#1e1e1e', color: '#f8fafc', lineHeight: '1.1' },
+  '.cm-content': { caretColor: 'green' },
+  '&.cm-focused .cm-cursor': {
+    backgroundColor: 'green',
+    borderLeft: 'none',
+    width: '1ch',
+    mixBlendMode: 'difference',
+  },
   '.cm-chord': { color: '#60a5fa', fontWeight: 'bold', cursor: 'pointer', padding: '0px 5px', borderRadius: '3px', '&:hover': { backgroundColor: '#27272a' }, fontSize: '0.86em' },
   '.cm-lyric': { color: '#f8fafc' },
 });
