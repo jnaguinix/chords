@@ -31,6 +31,7 @@ function App() {
   const [songForReharmonizer, setSongForReharmonizer] = useState<ProcessedSong | null>(null);
   const [activeChord, setActiveChord] = useState<SequenceItem | null>(null);
   const [transpositionOffset, setTranspositionOffset] = useState<number>(0);
+  const [currentSongDoc, setCurrentSongDoc] = useState(sampleSong); // Nuevo estado para el contenido de la canción
 
   // ✅ Referencias para el TranspositionManager
   const displayRef = useRef<HTMLDivElement>(null);
@@ -103,6 +104,61 @@ function App() {
     transpositionManagerRef.current?.reset();
   }, []);
 
+  // Funciones para Exportar/Importar
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExport = useCallback(() => {
+    const songData = {
+      version: "1.0",
+      metadata: {
+        title: "Mi Canción Exportada",
+        artist: "Desconocido",
+        key: "C", // Puedes hacer esto dinámico si tienes la clave de la canción
+        tempo: 120 // Puedes hacer esto dinámico si tienes el tempo
+      },
+      songContent: currentSongDoc
+    };
+    const jsonString = JSON.stringify(songData, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "mi_cancion.chord"; // Nombre del archivo con la extensión .chord
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [currentSongDoc]);
+
+  const handleImportClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const content = e.target?.result as string;
+          const songData = JSON.parse(content);
+          if (songData && songData.songContent) {
+            console.log("App.tsx: Contenido de la canción importada:", songData.songContent);
+            setCurrentSongDoc(songData.songContent);
+            // Aquí podrías también actualizar metadatos si los tuvieras en el UI
+            alert("Canción importada exitosamente!");
+          } else {
+            alert("Formato de archivo .chord inválido.");
+          }
+        } catch (error) {
+          console.error("Error al importar la canción:", error);
+          alert("Error al leer o parsear el archivo. Asegúrate de que sea un archivo .chord válido.");
+        }
+      };
+      reader.readAsText(file);
+    }
+  }, []);
+
   const renderActiveMode = () => {
     if (!audioEngine) return <div>Cargando motor de audio...</div>;
 
@@ -111,12 +167,13 @@ function App() {
         return <VisualizerMode audioEngine={audioEngine} showInspector={showInspector} />;
       case 'editor':
         return <SongEditor 
-                  initialDoc={sampleSong} 
+                  initialDoc={currentSongDoc} 
                   audioEngine={audioEngine} 
                   showInspector={showInspector} 
                   onChordHover={setActiveChord} 
                   transpositionOffset={transpositionOffset}
                   onSendToReharmonizer={handleSendToReharmonizer}
+                  onDocChange={setCurrentSongDoc} // Pasar la función para actualizar el documento
                />;
       case 'reharmonizer':
         return (
@@ -160,6 +217,20 @@ function App() {
             >
               Reset
             </button>
+            {/* Botones de Exportar/Importar */}
+            <button className="btn-control" onClick={handleExport} style={{ marginLeft: '10px' }}>
+              Exportar
+            </button>
+            <button className="btn-control" onClick={handleImportClick} style={{ marginLeft: '5px' }}>
+              Importar
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept=".chord,application/json" // Aceptar archivos .chord y JSON
+              style={{ display: 'none' }}
+            />
           </div>
         </>
       )}
