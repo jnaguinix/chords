@@ -21,14 +21,18 @@ const ALTERATION_MAP: { [key: string]: { degree: number, change: number } } = {
     'b9': { degree: 9, change: -1 }, '#9': { degree: 9, change: 1 },
     '#11': { degree: 11, change: 1 }, 'b13': { degree: 13, change: -1 }
 };
+
 const ADDITION_MAP: { [key: string]: { degree: number } } = {
+    'add(2)': { degree: 2 },
     'add(6)': { degree: 6 },
     'add(9)': { degree: 9 },
     'add(11)': { degree: 11 }
 };
+
 const DEGREE_TO_INTERVAL: { [key: number]: number } = {
-    1: 0, 3: 4, 4: 5, 5: 7, 6: 9, 7: 11, 9: 14, 11: 17, 13: 21
+    1: 0, 2: 2, 3: 4, 4: 5, 5: 7, 6: 9, 7: 11, 9: 14, 11: 17, 13: 21
 };
+
 
 const SUPERSCRIPT_TO_NUMBER: { [key: string]: number } = { '¹': 1, '²': 2, '³': 3, '⁴': 4, '⁵': 5, '⁶': 6, '⁷': 7, '⁸': 8, '⁹': 9 };
 const NUMBER_TO_SUPERSCRIPT: { [key: number]: string } = { 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
@@ -146,7 +150,9 @@ export function parseChordString(chord: string): SequenceItem | null {
     const additions: string[] = [];
     
     const modificationRegex = /([#b-])(\d+)|(add)(\d+)/g;
-    const unprocessedSuffix = remainingSuffix.replace(modificationRegex, (match, p1, p2, p3, p4) => {
+    // --- CAMBIO AQUÍ ---
+    // Se renombra 'match' a '_match' para indicar que no se usa y eliminar la alerta.
+    const unprocessedSuffix = remainingSuffix.replace(modificationRegex, (_match, p1, p2, p3, p4) => {
         if (p3 === 'add' && p4) {
             additions.push(`add(${p4})`);
         } else if (p1 && p2) {
@@ -158,10 +164,7 @@ export function parseChordString(chord: string): SequenceItem | null {
 
     let inversion: number | undefined;
     if (unprocessedSuffix.length > 0) {
-        // --- ESTA ES LA CORRECCIÓN ---
-        // Intenta leerlo como un número normal
         const potentialInversionInt = parseInt(unprocessedSuffix, 10);
-        // O intenta leerlo como un superíndice
         const potentialInversionSup = SUPERSCRIPT_TO_NUMBER[unprocessedSuffix];
 
         if (!isNaN(potentialInversionInt) && potentialInversionInt.toString() === unprocessedSuffix) {
@@ -169,7 +172,6 @@ export function parseChordString(chord: string): SequenceItem | null {
         } else if (potentialInversionSup) {
             inversion = potentialInversionSup;
         } else {
-            // Si no es ni un número ni un superíndice válido, el acorde es inválido.
             return null; 
         }
     }
@@ -186,7 +188,7 @@ export function parseChordString(chord: string): SequenceItem | null {
 }
 
 
-export function formatChordName(item: SequenceItem, options: { style: 'short' | 'long' }, transpositionOffset: number = 0): string {
+export function formatChordName(item: SequenceItem, options: { style: 'short' }, transpositionOffset: number = 0): string {
     if (!item || !item.rootNote || !item.type) return item?.raw || '';
     if (item.raw === '%' || item.raw === '|') return item.raw;
     
@@ -204,13 +206,18 @@ export function formatChordName(item: SequenceItem, options: { style: 'short' | 
             allMods.push(...item.additions.map(a => a.replace(/[()]/g, '')));
         }
 
-        let alterationsString = '';
+        let modificationsString = '';
         if (allMods.length > 0) {
             const sortedMods = allMods.sort((a, b) => parseInt(a.replace(/[^0-9]/g, ''), 10) - parseInt(b.replace(/[^0-9]/g, ''), 10));
-            alterationsString = `(${sortedMods.join('')})`;
+            
+            if (sortedMods.length === 1 && sortedMods[0].startsWith('add')) {
+                modificationsString = sortedMods[0];
+            } else {
+                modificationsString = `(${sortedMods.join('')})`;
+            }
         }
 
-        let displayName = root + suffix + alterationsString;
+        let displayName = root + suffix + modificationsString;
         
         if (item.inversion && item.inversion > 0 && NUMBER_TO_SUPERSCRIPT[item.inversion]) {
             displayName += NUMBER_TO_SUPERSCRIPT[item.inversion];
