@@ -21,8 +21,11 @@ const ALTERATION_MAP: { [key: string]: { degree: number, change: number } } = {
     'b9': { degree: 9, change: -1 }, '#9': { degree: 9, change: 1 },
     '#11': { degree: 11, change: 1 }, 'b13': { degree: 13, change: -1 }
 };
+// MODIFICADO: Se añade add(6) para que sea reconocido por el motor de audio y piano.
 const ADDITION_MAP: { [key: string]: { degree: number } } = {
-    'add(9)': { degree: 9 }, 'add(11)': { degree: 11 }
+    'add(6)': { degree: 6 },
+    'add(9)': { degree: 9 },
+    'add(11)': { degree: 11 }
 };
 const DEGREE_TO_INTERVAL: { [key: number]: number } = {
     1: 0, 3: 4, 4: 5, 5: 7, 6: 9, 7: 11, 9: 14, 11: 17, 13: 21
@@ -155,15 +158,17 @@ export function parseChordString(chord: string): SequenceItem | null {
     const alterations: string[] = [];
     const additions: string[] = [];
     
-    const modificationRegex = /([#b-])(\d+)|(add\d+)/g;
+    // MODIFICADO: Regex y lógica para parsear 'add' de forma dinámica.
+    const modificationRegex = /([#b-])(\d+)|(add)(\d+)/g;
     let match;
     while ((match = modificationRegex.exec(remainingSuffix)) !== null) {
-        const mod = match[0];
-        
-        if (mod.startsWith('add')) {
-            const addKey = mod === 'add11' || mod === 'add4' ? 'add(11)' : 'add(9)';
+        // match[3] es 'add', match[4] es el número (ej. "9", "6")
+        if (match[3] === 'add' && match[4]) {
+            const addKey = `add(${match[4]})`;
             additions.push(addKey);
-        } else {
+        } 
+        // match[1] es el símbolo de alteración, match[2] es el número
+        else if (match[1] && match[2]) {
             const symbol = match[1] === '-' ? 'b' : match[1];
             const number = match[2];
             alterations.push(`${symbol}${number}`);
@@ -190,13 +195,22 @@ export function formatChordName(item: SequenceItem, options: { style: 'short' | 
     const bass = item.bassNote ? transposeNote(item.bassNote, transpositionOffset) : null;
 
     if (options.style === 'short') {
-        const suffix = CHORD_TYPE_TO_SHORT_SYMBOL[item.type] ?? '';
+        let suffix = CHORD_TYPE_TO_SHORT_SYMBOL[item.type] ?? '';
         
+        // MODIFICADO: Se cambia el símbolo para 'add' para que sea más legible en el cifrado.
+        const allMods: string[] = [];
+        if (item.alterations) {
+            allMods.push(...item.alterations);
+        }
+        if (item.additions) {
+            // Convierte "add(9)" a "add9" solo para mostrarlo
+            allMods.push(...item.additions.map(a => a.replace(/[()]/g, '')));
+        }
+
         let alterationsString = '';
-        const allMods = [...(item.alterations || []), ...(item.additions || [])];
         if (allMods.length > 0) {
             const sortedMods = allMods.sort((a, b) => parseInt(a.replace(/[^0-9]/g, ''), 10) - parseInt(b.replace(/[^0-9]/g, ''), 10));
-            alterationsString = `(${sortedMods.join('').replace(/[()]/g, '')})`;
+            alterationsString = `(${sortedMods.join('')})`;
         }
 
         let displayName = root + suffix + alterationsString;
@@ -220,6 +234,9 @@ export function formatChordName(item: SequenceItem, options: { style: 'short' | 
 
         if (item.alterations && item.alterations.length > 0) {
             displayName += ` con alteraciones (${item.alterations.join(', ')})`;
+        }
+        if (item.additions && item.additions.length > 0) {
+            displayName += ` con notas añadidas (${item.additions.join(', ')})`;
         }
         if (bass && bass !== root) {
             const bassNoteName = NOTE_NAME_SPANISH[bass] || bass;
