@@ -45,6 +45,15 @@ export function transposeNote(note: string, semitones: number): string {
     return useFlats ? INDEX_TO_FLAT_NAME[newIndex] : INDEX_TO_SHARP_NAME[newIndex];
 }
 
+export function transposeChord(item: SequenceItem, semitones: number): SequenceItem {
+    const transposedItem = { ...item };
+    transposedItem.rootNote = transposeNote(item.rootNote, semitones);
+    if (item.bassNote) {
+        transposedItem.bassNote = transposeNote(item.bassNote, semitones);
+    }
+    return transposedItem;
+}
+
 export function getChordNotes(item: SequenceItem, transpositionOffset: number = 0): { notesToPress: number[], bassNoteIndex: number | null, allNotesForRange: number[] } {
     if (!item.rootNote || !item.type) {
         return { notesToPress: [], bassNoteIndex: null, allNotesForRange: [] };

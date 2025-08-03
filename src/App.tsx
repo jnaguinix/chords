@@ -244,6 +244,7 @@ function App() {
           onDelete={handleDeleteInspector}
           onInsert={handleInsertInspector}
           audioEngine={audioEngine}
+          transpositionOffset={transpositionOffset}
         />
       )}
     </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { populateNoteSelector, populateChordTypeSelector, createPiano } from '../utils/piano-renderer';
-import { getChordNotes, calculateOptimalPianoRange, formatChordName } from '../utils/chord-utils';
+import { getChordNotes, calculateOptimalPianoRange, formatChordName, transposeChord } from '../utils/chord-utils';
 import { MUSICAL_INTERVALS, INDEX_TO_SHARP_NAME, INDEX_TO_FLAT_NAME, NOTE_TO_INDEX } from '../utils/constants';
 import type { SequenceItem } from '../types';
 import type { AudioEngine } from '../utils/audio';
@@ -16,10 +16,12 @@ interface ChordInspectorModalProps {
   onInsert: (item: SequenceItem) => void;
   onDelete: (item: SequenceItem) => void;
   audioEngine: AudioEngine;
+  transpositionOffset: number;
 }
 
-const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, onClose, item, onSave, onInsert, onDelete, audioEngine }) => {
+const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, onClose, item, onSave, onInsert, onDelete, audioEngine, transpositionOffset }) => {
   const [editedItem, setEditedItem] = useState<SequenceItem | null>(null);
+  const [displayedItem, setDisplayedItem] = useState<SequenceItem | null>(null);
   const [isNewChord, setIsNewChord] = useState<boolean>(false);
 
   const rootNoteSelectRef = useRef<HTMLSelectElement>(null);
@@ -32,37 +34,46 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
 
   useEffect(() => {
     if (item) {
-      setEditedItem(JSON.parse(JSON.stringify(item)));
+      const originalItem = JSON.parse(JSON.stringify(item));
+      setEditedItem(originalItem);
+      setDisplayedItem(transposeChord(originalItem, transpositionOffset));
       setIsNewChord(item.id === undefined);
     } else {
       setEditedItem(null);
+      setDisplayedItem(null);
       setIsNewChord(false);
     }
-  }, [item]);
+  }, [item, transpositionOffset]);
 
   useEffect(() => {
-    if (!editedItem) return;
+    if (editedItem) {
+      setDisplayedItem(transposeChord(editedItem, transpositionOffset));
+    }
+  }, [editedItem, transpositionOffset]);
+
+  useEffect(() => {
+    if (!displayedItem) return;
 
     const allNotes = [...new Set([...INDEX_TO_SHARP_NAME, ...INDEX_TO_FLAT_NAME])].sort((a, b) => NOTE_TO_INDEX[a] - NOTE_TO_INDEX[b] || a.localeCompare(b));
 
     if (rootNoteSelectRef.current) {
       populateNoteSelector(rootNoteSelectRef.current, allNotes);
-      rootNoteSelectRef.current.value = editedItem.rootNote;
+      rootNoteSelectRef.current.value = displayedItem.rootNote;
     }
     if (bassNoteSelectRef.current) {
       populateNoteSelector(bassNoteSelectRef.current, allNotes, true);
-      bassNoteSelectRef.current.value = editedItem.bassNote || 'none';
+      bassNoteSelectRef.current.value = displayedItem.bassNote || 'none';
     }
     if (chordTypeSelectRef.current) {
-      populateChordTypeSelector(chordTypeSelectRef.current, editedItem.rootNote, editedItem.type);
-      chordTypeSelectRef.current.value = editedItem.type;
+      populateChordTypeSelector(chordTypeSelectRef.current, displayedItem.rootNote, displayedItem.type);
+      chordTypeSelectRef.current.value = displayedItem.type;
     }
 
     if (inversionSelectRef.current) {
-      const selectedType = editedItem.type;
+      const selectedType = displayedItem.type;
       const intervals = MUSICAL_INTERVALS[selectedType];
       const numNotes = intervals ? intervals.length : 0;
-      let currentInversion = editedItem.inversion || 0;
+      let currentInversion = displayedItem.inversion || 0;
 
       inversionSelectRef.current.innerHTML = '';
 
@@ -81,7 +92,7 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
     }
 
     if (chordInspectorPianoRef.current) {
-      const { notesToPress, bassNoteIndex, allNotesForRange } = getChordNotes(editedItem);
+      const { notesToPress, bassNoteIndex, allNotesForRange } = getChordNotes(displayedItem);
       if (allNotesForRange.length > 0) {
         const { startNote, endNote } = calculateOptimalPianoRange(allNotesForRange, 15, 2);
         createPiano(chordInspectorPianoRef.current, startNote, endNote, notesToPress, true, bassNoteIndex);
@@ -96,7 +107,7 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
       EDITABLE_ADDITIONS.forEach(add => {
         const button = document.createElement('button');
         button.className = 'mod-button addition-button'; // Clase específica para additions
-        if (editedItem.additions?.includes(add)) {
+        if (displayedItem.additions?.includes(add)) {
           button.classList.add('active');
         }
         
@@ -130,7 +141,7 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
       EDITABLE_ALTERATIONS.forEach(alt => {
         const button = document.createElement('button');
         button.className = 'mod-button alteration-button'; // Clase específica para alterations
-        if (editedItem.alterations?.includes(alt)) {
+        if (displayedItem.alterations?.includes(alt)) {
           button.classList.add('active');
         }
         button.textContent = alt;
@@ -154,7 +165,7 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
       });
     }
 
-  }, [editedItem]);
+  }, [displayedItem]);
 
   const handleRootNoteChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
     setEditedItem(p => p ? { 
@@ -192,8 +203,8 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
   }, []);
 
   const handlePlayChord = useCallback(() => { 
-    if (editedItem) audioEngine.playChord(editedItem); 
-  }, [editedItem, audioEngine]);
+    if (displayedItem) audioEngine.playChord(displayedItem); 
+  }, [displayedItem, audioEngine]);
 
   const handleSave = useCallback(() => { 
     if (editedItem) onSave(editedItem); 
@@ -207,7 +218,7 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
     if (editedItem) onDelete(editedItem); 
   }, [editedItem, onDelete]);
 
-  if (!editedItem) return null;
+  if (!editedItem || !displayedItem) return null;
 
   return (
     <>
@@ -215,7 +226,7 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
       <div className={`chord-inspector-modal ${isVisible ? 'visible' : ''}`}>
         <div className="inspector-header">
           <h3 className="text-xl font-medium text-light-main font-fira mr-auto">
-            {formatChordName(editedItem, { style: 'short' })}
+            {formatChordName(displayedItem, { style: 'short' })}
           </h3>
           <button className="play-btn-modal" onClick={handlePlayChord}>
             <svg className="w-4 h-4 ml-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" fill="currentColor">
