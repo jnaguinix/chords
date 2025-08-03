@@ -6,7 +6,7 @@
 */
 
 import { CHORD_DISPLAY_LIST, IS_BLACK_KEY, INDEX_TO_SHARP_NAME, INDEX_TO_FLAT_NAME, NOTE_TO_INDEX } from './constants';
-import { formatChordName } from './chord-utils';
+import { formatChordName, transposeNote } from './chord-utils';
 import type { SongLine, SequenceItem, SongChord } from '../types';
 
 /**
@@ -40,11 +40,12 @@ export function populateNoteSelector(
 
     uniqueNotesMap.forEach(({ sharp, flat }) => {
         const option = document.createElement('option');
+        // --- CAMBIO AQUÍ: Se usa la nota 'sharp' como valor para consistencia ---
         if (sharp === flat) {
             option.value = sharp;
             option.textContent = sharp;
         } else {
-            option.value = sharp;
+            option.value = sharp; // Usar C# en lugar de Db como valor, por ejemplo.
             option.textContent = `${sharp} / ${flat}`;
         }
         selectElement.appendChild(option);
@@ -55,12 +56,17 @@ export function populateNoteSelector(
 /**
  * Rellena un <select> con los nombres de acordes completos, basados en una nota raíz.
  */
+// --- CAMBIO AQUÍ: La función ahora acepta y usa transpositionOffset ---
 export function populateChordTypeSelector(
     selectElement: HTMLSelectElement, 
     rootNote: string,
-    defaultValue: string = 'Mayor'
+    defaultValue: string = 'Mayor',
+    transpositionOffset: number = 0
 ): void {
     selectElement.innerHTML = ''; // Limpia opciones anteriores
+    
+    // La nota raíz usada para los ejemplos debe estar transportada.
+    const displayRootNote = transposeNote(rootNote, transpositionOffset);
 
     CHORD_DISPLAY_LIST.forEach(chordInfo => {
         const option = document.createElement('option');
@@ -72,7 +78,8 @@ export function populateChordTypeSelector(
             option.value = ''; 
         } else {
             option.value = chordInfo.value; 
-            const tempItem: SequenceItem = { rootNote: rootNote, type: chordInfo.value };
+            // Crear un acorde de ejemplo con la nota raíz transportada
+            const tempItem: SequenceItem = { rootNote: displayRootNote, type: chordInfo.value };
             option.textContent = formatChordName(tempItem, { style: 'short' }); 
         }
         

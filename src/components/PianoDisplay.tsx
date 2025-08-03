@@ -5,7 +5,7 @@ import { getChordNotes, calculateOptimalPianoRange } from '../utils/chord-utils'
 
 interface PianoDisplayProps {
   chord: SequenceItem | null;
-  transpositionOffset: number; // Add transpositionOffset prop
+  transpositionOffset: number;
 }
 
 const PianoDisplay: React.FC<PianoDisplayProps> = ({ chord, transpositionOffset }) => {
@@ -15,20 +15,19 @@ const PianoDisplay: React.FC<PianoDisplayProps> = ({ chord, transpositionOffset 
     if (!pianoRef.current) return;
 
     if (chord) {
-      // Si hay un acorde, lo dibujamos con sus notas
-      const { notesToPress, bassNoteIndex, allNotesForRange } = getChordNotes(chord, transpositionOffset); // Pass transpositionOffset
+      // El acorde que llega ya está listo para ser mostrado.
+      // Se pasa un offset de 0 para que no se vuelva a transportar.
+      const { notesToPress, bassNoteIndex, allNotesForRange } = getChordNotes(chord, 0); 
       if (allNotesForRange.length > 0) {
         const { startNote, endNote } = calculateOptimalPianoRange(allNotesForRange, 25, 4);
         createPiano(pianoRef.current, startNote, endNote, notesToPress, true, bassNoteIndex);
       } else {
-        // Fallback por si el acorde es inválido: piano por defecto
         createPiano(pianoRef.current, 48, 72, [], true, null);
       }
     } else {
-      // Si no hay acorde, dibujamos un piano por defecto, sin notas
       createPiano(pianoRef.current, 48, 72, [], true, null);
     }
-  }, [chord, transpositionOffset]); // Add transpositionOffset to dependency array
+  }, [chord, transpositionOffset]);
 
   return (
     <div className="piano-display-container">

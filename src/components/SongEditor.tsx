@@ -8,22 +8,18 @@ import type { AudioEngine } from '../utils/audio';
 import type { ShowInspectorFn, SequenceItem, ProcessedSong } from '../types';
 import { parseChordString, formatChordName, transposeNote } from '../utils/chord-utils';
 
-// --- Esta es la versión estable y correcta, basada en tu código ---
 const chordTokenRegex = /[A-G](b|#)?[a-zA-Z0-9#b()¹²³⁴⁵⁶⁷⁸⁹]*(\/[A-G](b|#)?)?/;
 const chordLineRegex = new RegExp(`^(\\s*${chordTokenRegex.source}\\s*)+$`);
 
 const chordLanguage = StreamLanguage.define({
   token(stream) {
-    // Primero, se comprueba si la línea completa parece una línea de acordes. Si no, es letra.
     if (stream.sol() && !chordLineRegex.test(stream.string)) {
       stream.skipToEnd();
       return 'lyric';
     }
-    // Si es una línea de acordes, se busca el siguiente token que coincida con la regex.
     if (stream.match(chordTokenRegex)) {
       return 'chord';
     }
-    // Si no coincide, avanza al siguiente carácter.
     stream.next();
     return null;
   },
@@ -33,9 +29,10 @@ const chordLanguage = StreamLanguage.define({
   }
 });
 
+// --- CAMBIO AQUÍ: Se corrige el error de tipo ---
 const chordHighlightStyle = HighlightStyle.define([
   { tag: tags.keyword, class: 'cm-chord' },
-  { tag: tags.string, class: 'cm-lyric' },
+  { tag: tags.string, class: 'cm-lyric' }, // Se usa tags.string en lugar de 'string'
 ]);
 
 const editorTheme = EditorView.theme({
@@ -51,7 +48,6 @@ const editorTheme = EditorView.theme({
   '.cm-lyric': { color: '#f8fafc' },
 });
 
-// Función compartida para detectar acordes en una posición
 const findChordAtPosition = (tree: any, pos: number, docLength: number) => {
   let chordNode = tree.resolveInner(pos, 1);
   
@@ -82,6 +78,7 @@ const findChordAtPosition = (tree: any, pos: number, docLength: number) => {
   return chordNode.type.name === 'chord' ? chordNode : null;
 };
 
+
 const chordInteractionPlugin = (audioEngine: AudioEngine, showInspector: ShowInspectorFn, transpositionOffset: number, longPressTimeoutRef: React.MutableRefObject<number | null>, clearLongPressTimeout: () => void, onChordHover: (chord: SequenceItem | null) => void) => {
   return EditorView.domEventHandlers({
     mousedown(event, view) {
@@ -92,46 +89,35 @@ const chordInteractionPlugin = (audioEngine: AudioEngine, showInspector: ShowIns
       const chordNode = findChordAtPosition(tree, pos, view.state.doc.length);
 
       if (chordNode) {
-        const originalChordText = view.state.sliceDoc(chordNode.from, chordNode.to);
-        const parsedChord = parseChordString(originalChordText);
-
+        clearLongPressTimeout();
+        
+        const transposedChordText = view.state.sliceDoc(chordNode.from, chordNode.to);
+        const parsedChord = parseChordString(transposedChordText);
+        
         if (parsedChord) {
-          clearLongPressTimeout();
+            audioEngine.playChord(parsedChord, 0); 
+            onChordHover(parsedChord);
+        } else {
+            onChordHover(null);
+        }
 
-          const transposedChordForPlay = { ...parsedChord };
-          if (transpositionOffset !== 0) {
-            transposedChordForPlay.rootNote = transposeNote(transposedChordForPlay.rootNote, transpositionOffset);
-            if (transposedChordForPlay.bassNote) {
-              transposedChordForPlay.bassNote = transposeNote(transposedChordForPlay.bassNote, transpositionOffset);
-            }
-          }
-          audioEngine.playChord(transposedChordForPlay);
-
-          const transposedChordForDisplay = { ...parsedChord };
-          if (transpositionOffset !== 0) {
-            transposedChordForDisplay.rootNote = transposeNote(transposedChordForDisplay.rootNote, transpositionOffset);
-            if (transposedChordForDisplay.bassNote) {
-              transposedChordForDisplay.bassNote = transposeNote(transposedChordForDisplay.bassNote, transpositionOffset);
-            }
-          }
-          onChordHover(transposedChordForDisplay);
-
-          longPressTimeoutRef.current = window.setTimeout(() => {
+        longPressTimeoutRef.current = window.setTimeout(() => {
             if (longPressTimeoutRef.current !== null) {
                 longPressTimeoutRef.current = null;
-                const itemToEdit = { ...parsedChord, id: Date.now() };
-                if (transpositionOffset !== 0) {
-                  itemToEdit.rootNote = transposeNote(itemToEdit.rootNote, -transpositionOffset);
-                  if (itemToEdit.bassNote) {
-                    itemToEdit.bassNote = transposeNote(itemToEdit.bassNote, -transpositionOffset);
-                  }
+                
+                const transposedChordText = view.state.sliceDoc(chordNode.from, chordNode.to);
+                const parsedTransposedChord = parseChordString(transposedChordText);
+                if (!parsedTransposedChord) return;
+                
+                const originalChord = { ...parsedTransposedChord, id: Date.now() };
+                originalChord.rootNote = transposeNote(parsedTransposedChord.rootNote, -transpositionOffset);
+                if (parsedTransposedChord.bassNote) {
+                    originalChord.bassNote = transposeNote(parsedTransposedChord.bassNote, -transpositionOffset);
                 }
-                showInspector(itemToEdit, {
-                  onUpdate: (updatedTransposedItem: SequenceItem) => {
-                    const originalRootNote = transposeNote(updatedTransposedItem.rootNote, -transpositionOffset);
-                    const originalBassNote = updatedTransposedItem.bassNote ? transposeNote(updatedTransposedItem.bassNote, -transpositionOffset) : undefined;
-                    const originalUpdatedItem = { ...updatedTransposedItem, rootNote: originalRootNote, bassNote: originalBassNote };
-                    const formatted = formatChordName(originalUpdatedItem, { style: 'short' });
+
+                showInspector(originalChord, {
+                  onUpdate: (updatedItem: SequenceItem) => {
+                    const formatted = formatChordName(updatedItem, { style: 'short' });
                     view.dispatch({
                       changes: { from: chordNode.from, to: chordNode.to, insert: formatted }
                     });
@@ -143,8 +129,7 @@ const chordInteractionPlugin = (audioEngine: AudioEngine, showInspector: ShowIns
                   }
                 });
             }
-          }, 700);
-        }
+        }, 700);
       }
     },
     mouseleave(_event, _view) {
@@ -156,7 +141,7 @@ const chordInteractionPlugin = (audioEngine: AudioEngine, showInspector: ShowIns
   });
 };
 
-const cursorChordDetector = (onChordHover: (chord: SequenceItem | null) => void, transpositionOffset: number) => {
+const cursorChordDetector = (onChordHover: (chord: SequenceItem | null) => void) => {
   return EditorView.updateListener.of((update: ViewUpdate) => {
     if (!update.selectionSet) return;
 
@@ -165,22 +150,11 @@ const cursorChordDetector = (onChordHover: (chord: SequenceItem | null) => void,
     const chordNode = findChordAtPosition(tree, pos, update.state.doc.length);
 
     if (chordNode) {
-      const originalChordText = update.state.sliceDoc(chordNode.from, chordNode.to);
-      const parsedChord = parseChordString(originalChordText);
-      if (parsedChord) {
-        const transposedChord = { ...parsedChord };
-        if (transpositionOffset !== 0) {
-          transposedChord.rootNote = transposeNote(transposedChord.rootNote, transpositionOffset);
-          if (transposedChord.bassNote) {
-            transposedChord.bassNote = transposeNote(transposedChord.bassNote, transpositionOffset);
-          }
-        }
-        onChordHover(transposedChord);
-      } else {
-        onChordHover(null);
-      }
+        const chordText = update.state.sliceDoc(chordNode.from, chordNode.to);
+        const parsedChord = parseChordString(chordText);
+        onChordHover(parsedChord);
     } else {
-      onChordHover(null);
+        onChordHover(null);
     }
   });
 };
@@ -220,7 +194,7 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
           syntaxHighlighting(chordHighlightStyle),
           editorTheme,
           chordInteractionPlugin(audioEngine, showInspector, transpositionOffset, longPressTimeoutRef, clearLongPressTimeout, onChordHover),
-          cursorChordDetector(onChordHover, transpositionOffset),
+          cursorChordDetector(onChordHover),
         ],
       });
 
@@ -240,56 +214,35 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
 
   useEffect(() => {
     if (viewRef.current && initializedRef.current) {
-      let newDisplayedDoc = '';
-      const lines = untransposedDoc.split('\n');
+        const lines = untransposedDoc.split('\n');
 
-      newDisplayedDoc = lines.map(line => {
-        if (chordLineRegex.test(line)) {
-          let transposedLine = '';
-          let lastIndex = 0;
-          const matches = [...line.matchAll(/[A-G](b|#)?(m|maj|min|dim|aug|add|sus)?[0-9]?(\s*\([^)]*\))?(\/[A-G](b|#)?)?/g)];
-
-          for (const match of matches) {
-            const chordText = match[0];
-            const startIndex = match.index;
-
-            if (startIndex !== undefined) {
-              transposedLine += line.substring(lastIndex, startIndex);
-              lastIndex = startIndex + chordText.length;
-
-              const parsedChord = parseChordString(chordText);
-              if (parsedChord) {
-                const transposedChord = { ...parsedChord };
-                transposedChord.rootNote = transposeNote(parsedChord.rootNote, transpositionOffset);
-                if (parsedChord.bassNote) {
-                  transposedChord.bassNote = transposeNote(parsedChord.bassNote, transpositionOffset);
-                }
-                transposedLine += formatChordName(transposedChord, { style: 'short' });
-              } else {
-                transposedLine += chordText;
-              }
+        const newDisplayedDoc = lines.map(line => {
+            if (line.trim().match(/^[A-G]/)) {
+                return line.replace(/\S+/g, (chordText) => {
+                    const parsedChord = parseChordString(chordText);
+                    if (parsedChord) {
+                        return formatChordName(parsedChord, { style: 'short' }, transpositionOffset);
+                    }
+                    return chordText;
+                });
             }
-          }
-          transposedLine += line.substring(lastIndex);
-          return transposedLine;
-        }
-        return line;
-      }).join('\n');
+            return line;
+        }).join('\n');
 
-      if (viewRef.current.state.doc.toString() !== newDisplayedDoc) {
-        isProgrammaticChangeRef.current = true;
-        viewRef.current.dispatch({
-          changes: { from: 0, to: viewRef.current.state.doc.length, insert: newDisplayedDoc }
-        });
-        isProgrammaticChangeRef.current = false;
-      }
+        if (viewRef.current.state.doc.toString() !== newDisplayedDoc) {
+            isProgrammaticChangeRef.current = true;
+            viewRef.current.dispatch({
+                changes: { from: 0, to: viewRef.current.state.doc.length, insert: newDisplayedDoc }
+            });
+            isProgrammaticChangeRef.current = false;
+        }
     }
   }, [transpositionOffset, untransposedDoc, viewRef, initializedRef]);
-
+  
   useEffect(() => {
     if (viewRef.current && initializedRef.current) {
       const currentEditorDoc = viewRef.current.state.doc.toString();
-      if (initialDoc !== currentEditorDoc) {
+      if (initialDoc !== currentEditorDoc && untransposedDoc !== initialDoc) {
         isProgrammaticChangeRef.current = true;
         viewRef.current.dispatch({
           changes: { from: 0, to: currentEditorDoc.length, insert: initialDoc }
@@ -298,7 +251,7 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
         setUntransposedDoc(initialDoc);
       }
     }
-  }, [initialDoc, viewRef, initializedRef]);
+  }, [initialDoc, untransposedDoc, viewRef, initializedRef]);
 
   useEffect(() => {
     if (viewRef.current) {
@@ -308,7 +261,7 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
           syntaxHighlighting(chordHighlightStyle),
           editorTheme,
           chordInteractionPlugin(audioEngine, showInspector, transpositionOffset, longPressTimeoutRef, clearLongPressTimeout, onChordHover),
-          cursorChordDetector(onChordHover, transpositionOffset),
+          cursorChordDetector(onChordHover),
           EditorView.updateListener.of((update) => {
             if (update.docChanged && !isProgrammaticChangeRef.current) {
               const newDoc = update.state.doc.toString();
