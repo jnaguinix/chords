@@ -28,6 +28,11 @@ const DEGREE_TO_INTERVAL: { [key: number]: number } = {
     1: 0, 3: 4, 4: 5, 5: 7, 6: 9, 7: 11, 9: 14, 11: 17, 13: 21
 };
 
+// --- NEW: Maps for superscript notation ---
+const SUPERSCRIPT_TO_NUMBER: { [key: string]: number } = { '¹': 1, '²': 2, '³': 3, '⁴': 4, '⁵': 5, '⁶': 6, '⁷': 7, '⁸': 8, '⁹': 9 };
+const NUMBER_TO_SUPERSCRIPT: { [key: number]: string } = { 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+// --- END NEW ---
+
 export function transposeNote(note: string, semitones: number): string {
     const currentIndex = NOTE_TO_INDEX[note];
     if (currentIndex === undefined) return note;
@@ -70,15 +75,22 @@ export function getChordNotes(item: SequenceItem, transpositionOffset: number = 
         });
     }
     fundamentalChordNotes = [...new Set(fundamentalChordNotes)].sort((a, b) => a - b);
+
+    // --- THIS IS THE FIX ---
+    // 1. Calculate Bass (Orange Note) using FUNDAMENTAL notes as reference, just like your original code.
     let bassAbsoluteIndex: number | null = null;
     const transposedBassNote = item.bassNote ? transposeNote(item.bassNote, transpositionOffset) : transposedRootNote;
     const bassNoteIndexMod12 = NOTE_TO_INDEX[transposedBassNote];
     if (bassNoteIndexMod12 !== undefined) {
-        const lowestChordNote = Math.min(...fundamentalChordNotes);
-        let tempBassIndex = bassNoteIndexMod12 + (Math.floor(lowestChordNote / 12)) * 12;
-        if (tempBassIndex >= lowestChordNote) tempBassIndex -= 12;
+        const lowestFundamentalNote = Math.min(...fundamentalChordNotes);
+        let tempBassIndex = bassNoteIndexMod12 + (Math.floor(lowestFundamentalNote / 12)) * 12;
+        if (tempBassIndex >= lowestFundamentalNote) {
+            tempBassIndex -= 12;
+        }
         bassAbsoluteIndex = tempBassIndex;
     }
+
+    // 2. NOW apply inversion to the Chord (Blue Notes)
     let chordAbsoluteIndices = [...fundamentalChordNotes];
     if (item.inversion && item.inversion > 0) {
         for (let i = 0; i < item.inversion; i++) {
@@ -87,6 +99,8 @@ export function getChordNotes(item: SequenceItem, transpositionOffset: number = 
             chordAbsoluteIndices.sort((a, b) => a - b);
         }
     }
+    // --- END FIX ---
+
     const allNotesForRange = [...new Set([...chordAbsoluteIndices, ...(bassAbsoluteIndex !== null ? [bassAbsoluteIndex] : [])])];
     return { notesToPress: chordAbsoluteIndices, bassNoteIndex: bassAbsoluteIndex, allNotesForRange };
 }
@@ -99,12 +113,19 @@ export function parseChordString(chord: string): SequenceItem | null {
     let bassNote: string | undefined;
     let mainPart = sanitizedChord;
 
-    const bassMatch = sanitizedChord.match(/\/([A-G][#b]?)$/);
+    const bassMatch = mainPart.match(/\/([A-G][#b]?)$/);
     if (bassMatch && bassMatch[0]) {
         bassNote = bassMatch[1];
-        mainPart = sanitizedChord.substring(0, sanitizedChord.length - bassMatch[0].length);
+        mainPart = mainPart.substring(0, mainPart.length - bassMatch[0].length);
     }
     
+    let inversion: number | undefined;
+    const lastChar = mainPart.slice(-1);
+    if (SUPERSCRIPT_TO_NUMBER[lastChar]) {
+        inversion = SUPERSCRIPT_TO_NUMBER[lastChar];
+        mainPart = mainPart.slice(0, -1);
+    }
+
     const rootMatch = mainPart.match(/^[A-G][#b]?/);
     if (!rootMatch) return null;
     const rootNote = rootMatch[0];
@@ -154,6 +175,7 @@ export function parseChordString(chord: string): SequenceItem | null {
         rootNote, 
         type: foundType, 
         bassNote, 
+        inversion,
         alterations: alterations.length > 0 ? alterations : undefined,
         additions: additions.length > 0 ? additions : undefined
     };
@@ -178,6 +200,11 @@ export function formatChordName(item: SequenceItem, options: { style: 'short' | 
         }
 
         let displayName = root + suffix + alterationsString;
+        
+        if (item.inversion && item.inversion > 0 && NUMBER_TO_SUPERSCRIPT[item.inversion]) {
+            displayName += NUMBER_TO_SUPERSCRIPT[item.inversion];
+        }
+        
         if (bass && bass !== root) {
             displayName += `/${bass}`;
         }

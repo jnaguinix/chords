@@ -8,15 +8,20 @@ import type { AudioEngine } from '../utils/audio';
 import type { ShowInspectorFn, SequenceItem, ProcessedSong } from '../types';
 import { parseChordString, formatChordName, transposeNote } from '../utils/chord-utils';
 
-const chordLineRegex = /^( *[A-G](b|#)?(m|maj|min|dim|aug|add|sus)?[0-9]?(\s*\([^)]*\))?(\/[A-G](b|#)?)? *)+$/i;
+// --- THIS IS THE FIX: A single, robust regex for what constitutes a chord token ---
+const chordTokenRegex = /[A-G](b|#)?[a-zA-Z0-9#b()¹²³⁴⁵⁶⁷⁸⁹]*(\/[A-G](b|#)?)?/;
+// --- And a regex for a line that ONLY contains these tokens and whitespace ---
+const chordLineRegex = new RegExp(`^(\\s*${chordTokenRegex.source}\\s*)+$`);
 
 const chordLanguage = StreamLanguage.define({
   token(stream) {
+    // First, check if the whole line looks like a chord line. If not, it's a lyric.
     if (stream.sol() && !chordLineRegex.test(stream.string)) {
       stream.skipToEnd();
       return 'lyric';
     }
-    if (stream.match(/[A-G](b|#)?[a-zA-Z0-9#b/()]*(\s*\([^)]*\))?(\/[A-G](b|#)?)?/)) {
+    // If it is a chord line, find the next chord token.
+    if (stream.match(chordTokenRegex)) {
       return 'chord';
     }
     stream.next();
@@ -126,9 +131,9 @@ const chordInteractionPlugin = (audioEngine: AudioEngine, showInspector: ShowIns
                 longPressTimeoutRef.current = null;
                 const itemToEdit = { ...parsedChord, id: Date.now() };
                 if (transpositionOffset !== 0) {
-                  itemToEdit.rootNote = transposeNote(itemToEdit.rootNote, transpositionOffset);
+                  itemToEdit.rootNote = transposeNote(itemToEdit.rootNote, -transpositionOffset);
                   if (itemToEdit.bassNote) {
-                    itemToEdit.bassNote = transposeNote(itemToEdit.bassNote, transpositionOffset);
+                    itemToEdit.bassNote = transposeNote(itemToEdit.bassNote, -transpositionOffset);
                   }
                 }
                 showInspector(itemToEdit, {
