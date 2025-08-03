@@ -140,13 +140,11 @@ export function parseChordString(chord: string): SequenceItem | null {
 
     if (foundType === null) return null;
 
-    // --- ESTA ES LA LÓGICA CORREGIDA Y DEFINITIVA ---
     let remainingSuffix = cleanSuffix.substring(foundSuffix.length);
     
     const alterations: string[] = [];
     const additions: string[] = [];
     
-    // 1. Se buscan y extraen primero todas las modificaciones (add, b9, etc.)
     const modificationRegex = /([#b-])(\d+)|(add)(\d+)/g;
     const unprocessedSuffix = remainingSuffix.replace(modificationRegex, (match, p1, p2, p3, p4) => {
         if (p3 === 'add' && p4) {
@@ -155,18 +153,23 @@ export function parseChordString(chord: string): SequenceItem | null {
             const symbol = p1 === '-' ? 'b' : p1;
             alterations.push(`${symbol}${p2}`);
         }
-        return ''; // Se elimina la modificación del string
+        return '';
     });
 
-    // 2. Lo que queda en `unprocessedSuffix` DEBERÍA ser solo el número de inversión.
     let inversion: number | undefined;
     if (unprocessedSuffix.length > 0) {
-        const potentialInversion = parseInt(unprocessedSuffix, 10);
-        // Se comprueba si es un número válido y si no hay más texto.
-        if (!isNaN(potentialInversion) && potentialInversion.toString() === unprocessedSuffix) {
-            inversion = potentialInversion;
+        // --- ESTA ES LA CORRECCIÓN ---
+        // Intenta leerlo como un número normal
+        const potentialInversionInt = parseInt(unprocessedSuffix, 10);
+        // O intenta leerlo como un superíndice
+        const potentialInversionSup = SUPERSCRIPT_TO_NUMBER[unprocessedSuffix];
+
+        if (!isNaN(potentialInversionInt) && potentialInversionInt.toString() === unprocessedSuffix) {
+            inversion = potentialInversionInt;
+        } else if (potentialInversionSup) {
+            inversion = potentialInversionSup;
         } else {
-            // Si queda texto que no es un número de inversión, el acorde es inválido.
+            // Si no es ni un número ni un superíndice válido, el acorde es inválido.
             return null; 
         }
     }
