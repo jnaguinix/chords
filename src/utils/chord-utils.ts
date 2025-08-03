@@ -1,41 +1,41 @@
 /*
 ================================================================================
 |                              chord-utils.ts                                  |
+|         (Usa los mapas generados desde el nuevo constants.ts)                |
 ================================================================================
 */
 
 import { 
     NOTE_TO_INDEX, 
-    MUSICAL_INTERVALS, 
     INDEX_TO_SHARP_NAME, 
     INDEX_TO_FLAT_NAME, 
-    CHORD_TYPE_MAP, 
     NOTE_NAME_SPANISH,
+    MUSICAL_INTERVALS, 
+    CHORD_TYPE_MAP, 
     CHORD_TYPE_TO_READABLE_NAME,
     CHORD_TYPE_TO_SHORT_SYMBOL 
 } from './constants';
 import type { SequenceItem, ProcessedSong, SongLine, SongChord } from '../types';
 
-const ALTERATION_MAP: { [key: string]: { degree: number, change: number } } = {
+const ALTERATION_MAP: { [key:string]: { degree: number, change: number } } = {
     'b5': { degree: 5, change: -1 }, '#5': { degree: 5, change: 1 },
     'b9': { degree: 9, change: -1 }, '#9': { degree: 9, change: 1 },
     '#11': { degree: 11, change: 1 }, 'b13': { degree: 13, change: -1 }
 };
 
-const ADDITION_MAP: { [key: string]: { degree: number } } = {
+const ADDITION_MAP: { [key:string]: { degree: number } } = {
     'add(2)': { degree: 2 },
     'add(6)': { degree: 6 },
     'add(9)': { degree: 9 },
     'add(11)': { degree: 11 }
 };
 
-const DEGREE_TO_INTERVAL: { [key: number]: number } = {
+const DEGREE_TO_INTERVAL: { [key:number]: number } = {
     1: 0, 2: 2, 3: 4, 4: 5, 5: 7, 6: 9, 7: 11, 9: 14, 11: 17, 13: 21
 };
 
-
-const SUPERSCRIPT_TO_NUMBER: { [key: string]: number } = { '¹': 1, '²': 2, '³': 3, '⁴': 4, '⁵': 5, '⁶': 6, '⁷': 7, '⁸': 8, '⁹': 9 };
-const NUMBER_TO_SUPERSCRIPT: { [key: number]: string } = { 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+const SUPERSCRIPT_TO_NUMBER: { [key:string]: number } = { '¹': 1, '²': 2, '³': 3, '⁴': 4, '⁵': 5, '⁶': 6, '⁷': 7, '⁸': 8, '⁹': 9 };
+const NUMBER_TO_SUPERSCRIPT: { [key:number]: string } = { 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
 
 export function transposeNote(note: string, semitones: number): string {
     const currentIndex = NOTE_TO_INDEX[note];
@@ -150,8 +150,6 @@ export function parseChordString(chord: string): SequenceItem | null {
     const additions: string[] = [];
     
     const modificationRegex = /([#b-])(\d+)|(add)(\d+)/g;
-    // --- CAMBIO AQUÍ ---
-    // Se renombra 'match' a '_match' para indicar que no se usa y eliminar la alerta.
     const unprocessedSuffix = remainingSuffix.replace(modificationRegex, (_match, p1, p2, p3, p4) => {
         if (p3 === 'add' && p4) {
             additions.push(`add(${p4})`);
@@ -187,8 +185,7 @@ export function parseChordString(chord: string): SequenceItem | null {
     };
 }
 
-
-export function formatChordName(item: SequenceItem, options: { style: 'short' }, transpositionOffset: number = 0): string {
+export function formatChordName(item: SequenceItem, options: { style: 'short' | 'long' }, transpositionOffset: number = 0): string {
     if (!item || !item.rootNote || !item.type) return item?.raw || '';
     if (item.raw === '%' || item.raw === '|') return item.raw;
     
@@ -254,6 +251,8 @@ export function formatChordName(item: SequenceItem, options: { style: 'short' },
 
     return ''; 
 }
+
+// --- FUNCIONES RESTAURADAS ---
 
 export function parseSongText(songText: string): ProcessedSong {
     songText = songText.replace(/\t/g, '    ');
@@ -391,30 +390,6 @@ export function parseSongText(songText: string): ProcessedSong {
         processedLines.push({ lyrics: currentLineLyrics, chords: currentLineChords, isInstrumental: isInstrumental });
     }
     return { lines: processedLines, allChords };
-}
-
-export function applyTransposition(songToTranspose: ProcessedSong, transpositionOffset: number): ProcessedSong {
-    const chordsMap = new Map<number, SequenceItem>();
-    songToTranspose.allChords.forEach(c => c.id !== undefined && chordsMap.set(c.id, c));
-    chordsMap.forEach(chord => {
-        if (chord.rootNote) {
-            chord.rootNote = transposeNote(chord.rootNote, transpositionOffset);
-        }
-        if (chord.bassNote) {
-            chord.bassNote = transposeNote(chord.bassNote, transpositionOffset);
-        }
-    });
-    songToTranspose.lines.forEach(line => {
-        line.chords.forEach(songChord => {
-            if (songChord.chord.id !== undefined && !songChord.isAnnotation && songChord.chord.raw !== '%') {
-                 const transposedChord = chordsMap.get(songChord.chord.id);
-                 if (transposedChord) {
-                     songChord.chord = transposedChord;
-                 }
-            }
-        });
-    });
-    return songToTranspose;
 }
 
 export function calculateOptimalPianoRange(allNotes: number[], minWhiteKeys: number = 20, horizontalPaddingSemitones: number = 5): { startNote: number; endNote: number } {
