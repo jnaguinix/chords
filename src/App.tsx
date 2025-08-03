@@ -198,37 +198,33 @@ function App() {
           <div className="piano-header-container">
             <PianoDisplay chord={activeChord} transpositionOffset={transpositionOffset} />
           </div>
-          {/* ✅ Controles de transposición con TranspositionManager */}
-          <div className="transposition-controls-group mb-4">
-            <button className="btn-control" onClick={handleTransposeDown}>-</button>
-            {/* ✅ El display ahora usa ref para conectar con TranspositionManager */}
+          {/* Controles de transposición con nuevo estilo Neón Terminal */}
+          <div className="transposition-controls-group">
+            <button className="terminal-button" onClick={handleTransposeDown}>⯆</button>
             <div 
               ref={displayRef}
-              className="transposition-display-segment"
+              className="terminal-button active" // El display ahora parece un botón activo
             >
               Original
             </div>
-            <button className="btn-control" onClick={handleTransposeUp}>+</button>
-            {/* ✅ Botón de reset opcional */}
+            <button className="terminal-button" onClick={handleTransposeUp}>⯅</button>
             <button 
-              className="btn-control reset-btn" 
+              className="terminal-button danger" 
               onClick={handleTransposeReset}
-              style={{ marginLeft: '10px', fontSize: '12px' }}
             >
               Reset
             </button>
-            {/* Botones de Exportar/Importar */}
-            <button className="btn-control" onClick={handleExport} style={{ marginLeft: '10px' }}>
+            <button className="terminal-button" onClick={handleExport}>
               Exportar
             </button>
-            <button className="btn-control" onClick={handleImportClick} style={{ marginLeft: '5px' }}>
+            <button className="terminal-button" onClick={handleImportClick}>
               Importar
             </button>
             <input
               type="file"
               ref={fileInputRef}
               onChange={handleFileChange}
-              accept=".chord,application/json" // Aceptar archivos .chord y JSON
+              accept=".chord,application/json"
               style={{ display: 'none' }}
             />
           </div>

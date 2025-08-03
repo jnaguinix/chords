@@ -207,6 +207,7 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
   const viewRef = useRef<EditorView | null>(null);
   const longPressTimeoutRef = useRef<number | null>(null);
   const initializedRef = useRef<boolean>(false);
+  const isProgrammaticChangeRef = useRef(false); // Para evitar ciclos de actualización
 
   // Internal state to hold the untransposed version of the song
   const [untransposedDoc, setUntransposedDoc] = useState(initialDoc);
@@ -287,9 +288,11 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
       }).join('\n');
 
       if (viewRef.current.state.doc.toString() !== newDisplayedDoc) {
+        isProgrammaticChangeRef.current = true;
         viewRef.current.dispatch({
           changes: { from: 0, to: viewRef.current.state.doc.length, insert: newDisplayedDoc }
         });
+        isProgrammaticChangeRef.current = false;
       }
     }
   }, [transpositionOffset, untransposedDoc, viewRef, initializedRef]); // Depend on untransposedDoc and transpositionOffset
@@ -298,13 +301,12 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
   useEffect(() => {
     if (viewRef.current && initializedRef.current) {
       const currentEditorDoc = viewRef.current.state.doc.toString();
-      console.log("SongEditor.tsx: initialDoc recibido:", initialDoc);
-      console.log("SongEditor.tsx: Contenido actual del editor:", currentEditorDoc);
       if (initialDoc !== currentEditorDoc) {
-        console.log("SongEditor.tsx: Actualizando editor con nuevo initialDoc.");
+        isProgrammaticChangeRef.current = true;
         viewRef.current.dispatch({
           changes: { from: 0, to: currentEditorDoc.length, insert: initialDoc }
         });
+        isProgrammaticChangeRef.current = false;
         setUntransposedDoc(initialDoc); // Keep internal state in sync
       }
     }
@@ -321,7 +323,7 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
           chordInteractionPlugin(audioEngine, showInspector, transpositionOffset, longPressTimeoutRef, clearLongPressTimeout, onChordHover),
           cursorChordDetector(onChordHover, transpositionOffset),
           EditorView.updateListener.of((update) => {
-            if (update.docChanged) {
+            if (update.docChanged && !isProgrammaticChangeRef.current) {
               const newDoc = update.state.doc.toString();
               setUntransposedDoc(newDoc);
               onDocChange(newDoc); // Notificar al componente padre sobre el cambio
