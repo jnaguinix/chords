@@ -6,10 +6,7 @@ import type { SequenceItem } from '../types';
 import type { AudioEngine } from '../utils/audio';
 
 const EDITABLE_ALTERATIONS = ['b5', '#5', 'b9', '#9', '#11', 'b13'];
-
-// --- CAMBIO AQUÍ ---
-// Se añade 'add(2)' a la lista de adiciones editables en el modal.
-const EDITABLE_ADDITIONS = ['add(2)', 'add(9)', 'add(11)', 'add(6)']; // <--- NUEVO
+const EDITABLE_ADDITIONS = ['add(9)', 'add(11)', 'add(6)']; // NUEVO: Additions editables
 
 interface ChordInspectorModalProps {
   isVisible: boolean;
@@ -30,7 +27,7 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
   const bassNoteSelectRef = useRef<HTMLSelectElement>(null);
   const inversionSelectRef = useRef<HTMLSelectElement>(null);
   const modificationsEditorRef = useRef<HTMLDivElement>(null);
-  const additionsEditorRef = useRef<HTMLDivElement>(null);
+  const additionsEditorRef = useRef<HTMLDivElement>(null); // NUEVO: Ref para additions
   const chordInspectorPianoRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -93,15 +90,17 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
       }
     }
 
+    // NUEVO: Editor de Additions
     if (additionsEditorRef.current) {
       additionsEditorRef.current.innerHTML = '';
       EDITABLE_ADDITIONS.forEach(add => {
         const button = document.createElement('button');
-        button.className = 'mod-button addition-button'; 
+        button.className = 'mod-button addition-button'; // Clase específica para additions
         if (editedItem.additions?.includes(add)) {
           button.classList.add('active');
         }
         
+        // Formatear el texto del botón para mostrar sin paréntesis
         const displayText = add.replace('add(', 'add').replace(')', '');
         button.textContent = displayText;
         
@@ -125,11 +124,12 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
       });
     }
 
+    // Editor de Alterations (existente)
     if (modificationsEditorRef.current) {
       modificationsEditorRef.current.innerHTML = '';
       EDITABLE_ALTERATIONS.forEach(alt => {
         const button = document.createElement('button');
-        button.className = 'mod-button alteration-button';
+        button.className = 'mod-button alteration-button'; // Clase específica para alterations
         if (editedItem.alterations?.includes(alt)) {
           button.classList.add('active');
         }
@@ -161,8 +161,8 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
       ...p, 
       rootNote: e.target.value, 
       type: 'Mayor', 
-      alterations: undefined, 
-      additions: undefined,   
+      alterations: undefined, // Limpiar alterations
+      additions: undefined,   // Limpiar additions
       inversion: 0 
     } : null);
   }, []);
@@ -171,8 +171,8 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
     setEditedItem(p => p ? { 
       ...p, 
       type: e.target.value, 
-      alterations: undefined, 
-      additions: undefined,   
+      alterations: undefined, // Limpiar alterations
+      additions: undefined,   // Limpiar additions
       inversion: 0 
     } : null);
   }, []);
@@ -249,11 +249,13 @@ const ChordInspectorModal: React.FC<ChordInspectorModalProps> = ({ isVisible, on
           </div>
         </div>
         
+        {/* NUEVO: Sección de Additions */}
         <div className="mb-4">
           <label className="selector-label block mb-2">Notas Añadidas</label>
           <div ref={additionsEditorRef} className="additions-editor flex flex-wrap gap-2"></div>
         </div>
 
+        {/* Sección de Alterations (existente) */}
         <div className="mb-5">
           <label className="selector-label block mb-2">Alteraciones</label>
           <div ref={modificationsEditorRef} className="alteraciones flex flex-wrap gap-2"></div>
