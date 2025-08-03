@@ -21,7 +21,6 @@ const ALTERATION_MAP: { [key: string]: { degree: number, change: number } } = {
     'b9': { degree: 9, change: -1 }, '#9': { degree: 9, change: 1 },
     '#11': { degree: 11, change: 1 }, 'b13': { degree: 13, change: -1 }
 };
-// MODIFICADO: Se añade add(6) para que sea reconocido por el motor de audio y piano.
 const ADDITION_MAP: { [key: string]: { degree: number } } = {
     'add(6)': { degree: 6 },
     'add(9)': { degree: 9 },
@@ -31,10 +30,8 @@ const DEGREE_TO_INTERVAL: { [key: number]: number } = {
     1: 0, 3: 4, 4: 5, 5: 7, 6: 9, 7: 11, 9: 14, 11: 17, 13: 21
 };
 
-// --- NEW: Maps for superscript notation ---
 const SUPERSCRIPT_TO_NUMBER: { [key: string]: number } = { '¹': 1, '²': 2, '³': 3, '⁴': 4, '⁵': 5, '⁶': 6, '⁷': 7, '⁸': 8, '⁹': 9 };
 const NUMBER_TO_SUPERSCRIPT: { [key: number]: string } = { 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
-// --- END NEW ---
 
 export function transposeNote(note: string, semitones: number): string {
     const currentIndex = NOTE_TO_INDEX[note];
@@ -79,8 +76,6 @@ export function getChordNotes(item: SequenceItem, transpositionOffset: number = 
     }
     fundamentalChordNotes = [...new Set(fundamentalChordNotes)].sort((a, b) => a - b);
 
-    // --- THIS IS THE FIX ---
-    // 1. Calculate Bass (Orange Note) using FUNDAMENTAL notes as reference, just like your original code.
     let bassAbsoluteIndex: number | null = null;
     const transposedBassNote = item.bassNote ? transposeNote(item.bassNote, transpositionOffset) : transposedRootNote;
     const bassNoteIndexMod12 = NOTE_TO_INDEX[transposedBassNote];
@@ -93,7 +88,6 @@ export function getChordNotes(item: SequenceItem, transpositionOffset: number = 
         bassAbsoluteIndex = tempBassIndex;
     }
 
-    // 2. NOW apply inversion to the Chord (Blue Notes)
     let chordAbsoluteIndices = [...fundamentalChordNotes];
     if (item.inversion && item.inversion > 0) {
         for (let i = 0; i < item.inversion; i++) {
@@ -102,7 +96,6 @@ export function getChordNotes(item: SequenceItem, transpositionOffset: number = 
             chordAbsoluteIndices.sort((a, b) => a - b);
         }
     }
-    // --- END FIX ---
 
     const allNotesForRange = [...new Set([...chordAbsoluteIndices, ...(bassAbsoluteIndex !== null ? [bassAbsoluteIndex] : [])])];
     return { notesToPress: chordAbsoluteIndices, bassNoteIndex: bassAbsoluteIndex, allNotesForRange };
@@ -122,13 +115,6 @@ export function parseChordString(chord: string): SequenceItem | null {
         mainPart = mainPart.substring(0, mainPart.length - bassMatch[0].length);
     }
     
-    let inversion: number | undefined;
-    const lastChar = mainPart.slice(-1);
-    if (SUPERSCRIPT_TO_NUMBER[lastChar]) {
-        inversion = SUPERSCRIPT_TO_NUMBER[lastChar];
-        mainPart = mainPart.slice(0, -1);
-    }
-
     const rootMatch = mainPart.match(/^[A-G][#b]?/);
     if (!rootMatch) return null;
     const rootNote = rootMatch[0];
@@ -152,29 +138,39 @@ export function parseChordString(chord: string): SequenceItem | null {
         }
     }
 
-    if (!foundType) return null;
+    if (foundType === null) return null;
 
+    // --- ESTA ES LA LÓGICA CORREGIDA Y DEFINITIVA ---
     let remainingSuffix = cleanSuffix.substring(foundSuffix.length);
+    
     const alterations: string[] = [];
     const additions: string[] = [];
     
-    // MODIFICADO: Regex y lógica para parsear 'add' de forma dinámica.
+    // 1. Se buscan y extraen primero todas las modificaciones (add, b9, etc.)
     const modificationRegex = /([#b-])(\d+)|(add)(\d+)/g;
-    let match;
-    while ((match = modificationRegex.exec(remainingSuffix)) !== null) {
-        // match[3] es 'add', match[4] es el número (ej. "9", "6")
-        if (match[3] === 'add' && match[4]) {
-            const addKey = `add(${match[4]})`;
-            additions.push(addKey);
-        } 
-        // match[1] es el símbolo de alteración, match[2] es el número
-        else if (match[1] && match[2]) {
-            const symbol = match[1] === '-' ? 'b' : match[1];
-            const number = match[2];
-            alterations.push(`${symbol}${number}`);
+    const unprocessedSuffix = remainingSuffix.replace(modificationRegex, (match, p1, p2, p3, p4) => {
+        if (p3 === 'add' && p4) {
+            additions.push(`add(${p4})`);
+        } else if (p1 && p2) {
+            const symbol = p1 === '-' ? 'b' : p1;
+            alterations.push(`${symbol}${p2}`);
+        }
+        return ''; // Se elimina la modificación del string
+    });
+
+    // 2. Lo que queda en `unprocessedSuffix` DEBERÍA ser solo el número de inversión.
+    let inversion: number | undefined;
+    if (unprocessedSuffix.length > 0) {
+        const potentialInversion = parseInt(unprocessedSuffix, 10);
+        // Se comprueba si es un número válido y si no hay más texto.
+        if (!isNaN(potentialInversion) && potentialInversion.toString() === unprocessedSuffix) {
+            inversion = potentialInversion;
+        } else {
+            // Si queda texto que no es un número de inversión, el acorde es inválido.
+            return null; 
         }
     }
-
+    
     return { 
         raw: chord, 
         rootNote, 
@@ -197,13 +193,11 @@ export function formatChordName(item: SequenceItem, options: { style: 'short' | 
     if (options.style === 'short') {
         let suffix = CHORD_TYPE_TO_SHORT_SYMBOL[item.type] ?? '';
         
-        // MODIFICADO: Se cambia el símbolo para 'add' para que sea más legible en el cifrado.
         const allMods: string[] = [];
         if (item.alterations) {
             allMods.push(...item.alterations);
         }
         if (item.additions) {
-            // Convierte "add(9)" a "add9" solo para mostrarlo
             allMods.push(...item.additions.map(a => a.replace(/[()]/g, '')));
         }
 

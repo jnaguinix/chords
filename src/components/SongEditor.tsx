@@ -8,22 +8,22 @@ import type { AudioEngine } from '../utils/audio';
 import type { ShowInspectorFn, SequenceItem, ProcessedSong } from '../types';
 import { parseChordString, formatChordName, transposeNote } from '../utils/chord-utils';
 
-// --- THIS IS THE FIX: A single, robust regex for what constitutes a chord token ---
+// --- Esta es la versión estable y correcta, basada en tu código ---
 const chordTokenRegex = /[A-G](b|#)?[a-zA-Z0-9#b()¹²³⁴⁵⁶⁷⁸⁹]*(\/[A-G](b|#)?)?/;
-// --- And a regex for a line that ONLY contains these tokens and whitespace ---
 const chordLineRegex = new RegExp(`^(\\s*${chordTokenRegex.source}\\s*)+$`);
 
 const chordLanguage = StreamLanguage.define({
   token(stream) {
-    // First, check if the whole line looks like a chord line. If not, it's a lyric.
+    // Primero, se comprueba si la línea completa parece una línea de acordes. Si no, es letra.
     if (stream.sol() && !chordLineRegex.test(stream.string)) {
       stream.skipToEnd();
       return 'lyric';
     }
-    // If it is a chord line, find the next chord token.
+    // Si es una línea de acordes, se busca el siguiente token que coincida con la regex.
     if (stream.match(chordTokenRegex)) {
       return 'chord';
     }
+    // Si no coincide, avanza al siguiente carácter.
     stream.next();
     return null;
   },
@@ -55,28 +55,22 @@ const editorTheme = EditorView.theme({
 const findChordAtPosition = (tree: any, pos: number, docLength: number) => {
   let chordNode = tree.resolveInner(pos, 1);
   
-  // If the initial position doesn't land directly on a chord,
-  // try checking nearby positions to find a chord node
   if (chordNode.type.name !== 'chord') {
-    // Try positions to the left (up to 4 characters back)
     for (let offset = 1; offset <= 4 && pos - offset >= 0; offset++) {
       const testNode = tree.resolveInner(pos - offset, 1);
       if (testNode.type.name === 'chord') {
-        // Verify the position is actually within the chord's visual bounds + extra margin
-        if (pos <= testNode.to + 2) { // Added 2 characters margin to the right
+        if (pos <= testNode.to + 2) {
           chordNode = testNode;
           break;
         }
       }
     }
     
-    // If still not found, try positions to the right (up to 4 characters forward)
     if (chordNode.type.name !== 'chord') {
       for (let offset = 1; offset <= 4 && pos + offset < docLength; offset++) {
         const testNode = tree.resolveInner(pos + offset, 1);
         if (testNode.type.name === 'chord') {
-          // Verify the position is actually within the chord's visual bounds + extra margin
-          if (pos >= testNode.from - 2) { // Added 2 characters margin to the left
+          if (pos >= testNode.from - 2) {
             chordNode = testNode;
             break;
           }
@@ -91,20 +85,17 @@ const findChordAtPosition = (tree: any, pos: number, docLength: number) => {
 const chordInteractionPlugin = (audioEngine: AudioEngine, showInspector: ShowInspectorFn, transpositionOffset: number, longPressTimeoutRef: React.MutableRefObject<number | null>, clearLongPressTimeout: () => void, onChordHover: (chord: SequenceItem | null) => void) => {
   return EditorView.domEventHandlers({
     mousedown(event, view) {
-      // Get the document position of the click
       const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
-      if (pos === null) return; // Click was outside the editor content
+      if (pos === null) return;
 
       const tree = syntaxTree(view.state);
       const chordNode = findChordAtPosition(tree, pos, view.state.doc.length);
 
-      // Check if we found a chord
       if (chordNode) {
         const originalChordText = view.state.sliceDoc(chordNode.from, chordNode.to);
         const parsedChord = parseChordString(originalChordText);
 
         if (parsedChord) {
-          // Clear any existing timeout to prevent multiple triggers
           clearLongPressTimeout();
 
           const transposedChordForPlay = { ...parsedChord };
@@ -116,7 +107,6 @@ const chordInteractionPlugin = (audioEngine: AudioEngine, showInspector: ShowIns
           }
           audioEngine.playChord(transposedChordForPlay);
 
-          // Trigger onChordHover to update the piano display
           const transposedChordForDisplay = { ...parsedChord };
           if (transpositionOffset !== 0) {
             transposedChordForDisplay.rootNote = transposeNote(transposedChordForDisplay.rootNote, transpositionOffset);
@@ -138,7 +128,6 @@ const chordInteractionPlugin = (audioEngine: AudioEngine, showInspector: ShowIns
                 }
                 showInspector(itemToEdit, {
                   onUpdate: (updatedTransposedItem: SequenceItem) => {
-                    // Use the original chordNode's from/to for dispatching changes
                     const originalRootNote = transposeNote(updatedTransposedItem.rootNote, -transpositionOffset);
                     const originalBassNote = updatedTransposedItem.bassNote ? transposeNote(updatedTransposedItem.bassNote, -transpositionOffset) : undefined;
                     const originalUpdatedItem = { ...updatedTransposedItem, rootNote: originalRootNote, bassNote: originalBassNote };
@@ -148,7 +137,6 @@ const chordInteractionPlugin = (audioEngine: AudioEngine, showInspector: ShowIns
                     });
                   },
                   onDelete: () => {
-                    // Use the original chordNode's from/to for dispatching changes
                     view.dispatch({
                       changes: { from: chordNode.from, to: chordNode.to, insert: '' }
                     });
@@ -204,7 +192,7 @@ interface SongEditorProps {
   onChordHover: (chord: SequenceItem | null) => void;
   transpositionOffset: number;
   onSendToReharmonizer: (song: ProcessedSong) => void;
-  onDocChange: (doc: string) => void; // Nueva prop para notificar cambios en el documento
+  onDocChange: (doc: string) => void;
 }
 
 const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showInspector, onChordHover, transpositionOffset, onDocChange }) => {
@@ -212,9 +200,8 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
   const viewRef = useRef<EditorView | null>(null);
   const longPressTimeoutRef = useRef<number | null>(null);
   const initializedRef = useRef<boolean>(false);
-  const isProgrammaticChangeRef = useRef(false); // Para evitar ciclos de actualización
+  const isProgrammaticChangeRef = useRef(false);
 
-  // Internal state to hold the untransposed version of the song
   const [untransposedDoc, setUntransposedDoc] = useState(initialDoc);
 
   const clearLongPressTimeout = useCallback(() => {
@@ -224,11 +211,10 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
     }
   }, []);
 
-  // Effect to initialize the editor and untransposedDoc
   useEffect(() => {
     if (editorRef.current && !viewRef.current && !initializedRef.current) {
       const startState = EditorState.create({
-        doc: initialDoc, // Initialize with initialDoc
+        doc: initialDoc,
         extensions: [
           chordLanguage,
           syntaxHighlighting(chordHighlightStyle),
@@ -250,13 +236,12 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
         initializedRef.current = false;
       }
     };
-  }, [initialDoc]); // Depend on initialDoc for initial setup
+  }, [initialDoc]);
 
-  // Effect to handle changes in transpositionOffset
   useEffect(() => {
     if (viewRef.current && initializedRef.current) {
       let newDisplayedDoc = '';
-      const lines = untransposedDoc.split('\n'); // Use the untransposed version
+      const lines = untransposedDoc.split('\n');
 
       newDisplayedDoc = lines.map(line => {
         if (chordLineRegex.test(line)) {
@@ -275,7 +260,6 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
               const parsedChord = parseChordString(chordText);
               if (parsedChord) {
                 const transposedChord = { ...parsedChord };
-                // Apply the absolute transposition offset to the untransposed chord
                 transposedChord.rootNote = transposeNote(parsedChord.rootNote, transpositionOffset);
                 if (parsedChord.bassNote) {
                   transposedChord.bassNote = transposeNote(parsedChord.bassNote, transpositionOffset);
@@ -300,9 +284,8 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
         isProgrammaticChangeRef.current = false;
       }
     }
-  }, [transpositionOffset, untransposedDoc, viewRef, initializedRef]); // Depend on untransposedDoc and transpositionOffset
+  }, [transpositionOffset, untransposedDoc, viewRef, initializedRef]);
 
-  // Effect to update editor content when initialDoc prop changes (e.g., on import)
   useEffect(() => {
     if (viewRef.current && initializedRef.current) {
       const currentEditorDoc = viewRef.current.state.doc.toString();
@@ -312,12 +295,11 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
           changes: { from: 0, to: currentEditorDoc.length, insert: initialDoc }
         });
         isProgrammaticChangeRef.current = false;
-        setUntransposedDoc(initialDoc); // Keep internal state in sync
+        setUntransposedDoc(initialDoc);
       }
     }
   }, [initialDoc, viewRef, initializedRef]);
 
-  // Manejar cambios en las props (excepto initialDoc) for extensions
   useEffect(() => {
     if (viewRef.current) {
       viewRef.current.dispatch({
@@ -331,7 +313,7 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
             if (update.docChanged && !isProgrammaticChangeRef.current) {
               const newDoc = update.state.doc.toString();
               setUntransposedDoc(newDoc);
-              onDocChange(newDoc); // Notificar al componente padre sobre el cambio
+              onDocChange(newDoc);
             }
           }),
         ])
@@ -339,7 +321,6 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
     }
   }, [audioEngine, showInspector, onChordHover, transpositionOffset, clearLongPressTimeout, onDocChange]);
 
-  // Event listener global para mouseup
   useEffect(() => {
     const handleGlobalMouseUp = () => {
       clearLongPressTimeout();
