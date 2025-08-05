@@ -10,6 +10,7 @@ export type SequenceItem = {
     inversion?: number;
     alterations?: string[];
     additions?: string[];
+    position?: number; // Añadido para el contexto de la línea
 };
 
 /**

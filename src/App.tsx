@@ -3,12 +3,16 @@ import Navbar from './components/Navbar';
 import type { AppMode } from './components/Navbar';
 import VisualizerMode from './components/VisualizerMode';
 import SongEditor from './components/SongEditor';
-import ReharmonizerMode from './components/ReharmonizerMode';
+
 import ChordInspectorModal from './components/ChordInspectorModal';
+import DraggableModal from './components/DraggableModal'; // Importar el modal de sugerencias
 import PianoDisplay from './components/PianoDisplay';
 import { AudioEngine, initAudio } from './utils/audio';
-import { TranspositionManager } from './utils/transposition-manager'; // ✅ Importar TranspositionManager
-import type { SequenceItem, ProcessedSong, InspectorCallbacks, ShowInspectorFn } from './types';
+import { TranspositionManager } from './utils/transposition-manager';
+import { IntelliHarmonix } from './utils/reharmonization-engine'; // Importar el motor
+import { INDEX_TO_SHARP_NAME } from './utils/constants';
+import { formatChordName } from './utils/chord-utils'; // Importar formatChordName
+import type { SequenceItem, InspectorCallbacks, ShowInspectorFn, DetectedKey, ChordSuggestion } from './types';
 import './App.css';
 
 const sampleSong = `
@@ -19,6 +23,13 @@ Ejemplo de Cancioncita, solo debes añadir la letra de la cancion
 Y poner encima los acordes, no es nada complicado o si
 `;
 
+// Generar todas las tonalidades posibles para el selector
+const ALL_KEYS: DetectedKey[] = [];
+for (let i = 0; i < 12; i++) {
+    ALL_KEYS.push({ key: INDEX_TO_SHARP_NAME[i], scale: 'Major' });
+    ALL_KEYS.push({ key: INDEX_TO_SHARP_NAME[i], scale: 'Minor' });
+}
+
 function App() {
   const [activeMode, setActiveMode] = useState<AppMode>('editor');
   const [audioEngine, setAudioEngine] = useState<AudioEngine | null>(null);
@@ -28,12 +39,19 @@ function App() {
   const [inspectorItem, setInspectorItem] = useState<SequenceItem | null>(null);
   const [inspectorCallbacks, setInspectorCallbacks] = useState<InspectorCallbacks>({});
 
-  const [songForReharmonizer, setSongForReharmonizer] = useState<ProcessedSong | null>(null);
   const [activeChord, setActiveChord] = useState<SequenceItem | null>(null);
   const [transpositionOffset, setTranspositionOffset] = useState<number>(0);
-  const [currentSongDoc, setCurrentSongDoc] = useState(sampleSong); // Nuevo estado para el contenido de la canción
+  const [currentSongDoc, setCurrentSongDoc] = useState(sampleSong);
 
-  // ✅ Referencias para el TranspositionManager
+  // --- State para la nueva funcionalidad de rearmonización integrada ---
+  const [currentKey, setCurrentKey] = useState<DetectedKey>({ key: 'C', scale: 'Major' });
+  
+  const [isSuggestionModalVisible, setSuggestionModalVisible] = useState(false);
+  const [suggestions, setSuggestions] = useState<ChordSuggestion[]>([]);
+  const [chordToReharmonize, setChordToReharmonize] = useState<{ chord: SequenceItem, callback: (newChord: SequenceItem) => void } | null>(null);
+  const [insertionContext, setInsertionContext] = useState<{ lineIndex: number, charIndex: number, prevChord: SequenceItem | null, nextChord: SequenceItem | null } | null>(null);
+  // --- Fin del nuevo state ---
+
   const displayRef = useRef<HTMLDivElement>(null);
   const transpositionManagerRef = useRef<TranspositionManager | null>(null);
 
@@ -42,13 +60,11 @@ function App() {
     setAudioEngine(engine);
   }, []);
 
-  // ✅ Inicializar TranspositionManager cuando el display esté disponible
   useEffect(() => {
     if (displayRef.current && !transpositionManagerRef.current && activeMode === 'editor') {
       transpositionManagerRef.current = new TranspositionManager(
         displayRef.current,
         () => {
-          // Callback que sincroniza con React state
           const newOffset = transpositionManagerRef.current?.getOffset() || 0;
           setTranspositionOffset(newOffset);
         }
@@ -85,12 +101,6 @@ function App() {
     setInspectorVisible(false);
   };
 
-  const handleSendToReharmonizer = (song: ProcessedSong) => {
-    setSongForReharmonizer(song);
-    setActiveMode('reharmonizer');
-  };
-
-  // ✅ Usar TranspositionManager en lugar de state directo
   const handleTransposeUp = useCallback(() => {
     transpositionManagerRef.current?.up();
   }, []);
@@ -99,12 +109,10 @@ function App() {
     transpositionManagerRef.current?.down();
   }, []);
 
-  // ✅ Función para resetear (opcional)
   const handleTransposeReset = useCallback(() => {
     transpositionManagerRef.current?.reset();
   }, []);
 
-  // Funciones para Exportar/Importar
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = useCallback(() => {
@@ -113,8 +121,8 @@ function App() {
       metadata: {
         title: "Mi Canción Exportada",
         artist: "Desconocido",
-        key: "C", // Puedes hacer esto dinámico si tienes la clave de la canción
-        tempo: 120 // Puedes hacer esto dinámico si tienes el tempo
+        key: currentKey.key,
+        tempo: 120
       },
       songContent: currentSongDoc
     };
@@ -123,12 +131,12 @@ function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "mi_cancion.chord"; // Nombre del archivo con la extensión .chord
+    a.download = "mi_cancion.chord";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [currentSongDoc]);
+  }, [currentSongDoc, currentKey]);
 
   const handleImportClick = useCallback(() => {
     fileInputRef.current?.click();
@@ -143,9 +151,13 @@ function App() {
           const content = e.target?.result as string;
           const songData = JSON.parse(content);
           if (songData && songData.songContent) {
-            console.log("App.tsx: Contenido de la canción importada:", songData.songContent);
             setCurrentSongDoc(songData.songContent);
-            // Aquí podrías también actualizar metadatos si los tuvieras en el UI
+            if (songData.metadata?.key) {
+              const keyExists = ALL_KEYS.some(k => k.key === songData.metadata.key && k.scale === (songData.metadata.scale || 'Major'));
+              if (keyExists) {
+                setCurrentKey({ key: songData.metadata.key, scale: songData.metadata.scale || 'Major' });
+              }
+            }
             alert("Canción importada exitosamente!");
           } else {
             alert("Formato de archivo .chord inválido.");
@@ -158,6 +170,52 @@ function App() {
       reader.readAsText(file);
     }
   }, []);
+
+  // --- Funciones para la nueva funcionalidad ---
+  const handleKeyChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const [key, scale] = event.target.value.split('-');
+    setCurrentKey({ key, scale: scale as 'Major' | 'Minor' });
+  };
+
+  const handleReharmonizeClick = (chord: SequenceItem, callback: (newChord: SequenceItem) => void) => {
+    setInsertionContext(null); // Limpiar contexto de inserción si se hace clic en un acorde existente
+    const suggestions = IntelliHarmonix.getSuggestionsForChord(chord, currentKey);
+    setSuggestions(suggestions);
+    setChordToReharmonize({ chord, callback });
+    setSuggestionModalVisible(true);
+  };
+
+  const handleReharmonizeSpaceClick = (lineIndex: number, charIndex: number, prevChord: SequenceItem | null, nextChord: SequenceItem | null) => {
+    setChordToReharmonize(null); // Limpiar acorde a rearmonizar si se hace clic en espacio
+    setInsertionContext({ lineIndex, charIndex, prevChord, nextChord });
+    const suggestions = IntelliHarmonix.getPassingChordSuggestions(prevChord!, nextChord!, currentKey);
+    setSuggestions(suggestions);
+    setSuggestionModalVisible(true);
+  };
+
+  const handleSuggestionClick = (suggestedChord: SequenceItem) => {
+    if (chordToReharmonize) {
+      // Caso: Reemplazar un acorde existente
+      chordToReharmonize.callback(suggestedChord);
+    } else if (insertionContext) {
+      // Caso: Insertar un acorde de paso
+      const { lineIndex, charIndex } = insertionContext;
+      const currentDocLines = currentSongDoc.split('\n');
+      const targetLine = currentDocLines[lineIndex];
+
+      if (targetLine !== undefined) {
+        const newChordText = formatChordName(suggestedChord, { style: 'short' });
+        const newLine = targetLine.slice(0, charIndex) + newChordText + ' ' + targetLine.slice(charIndex);
+        currentDocLines[lineIndex] = newLine;
+        setCurrentSongDoc(currentDocLines.join('\n'));
+      }
+    }
+    setSuggestionModalVisible(false);
+    setChordToReharmonize(null);
+    setInsertionContext(null);
+  };
+  // --- Fin de las nuevas funciones ---
+
 
   const renderActiveMode = () => {
     if (!audioEngine) return <div>Cargando motor de audio...</div>;
@@ -172,17 +230,10 @@ function App() {
                   showInspector={showInspector} 
                   onChordHover={setActiveChord} 
                   transpositionOffset={transpositionOffset}
-                  onSendToReharmonizer={handleSendToReharmonizer}
-                  onDocChange={setCurrentSongDoc} // Pasar la función para actualizar el documento
+                  onDocChange={setCurrentSongDoc}
+                  onReharmonizeClick={handleReharmonizeClick}
+                  onReharmonizeSpaceClick={handleReharmonizeSpaceClick}
                />;
-      case 'reharmonizer':
-        return (
-          <ReharmonizerMode
-            song={songForReharmonizer}
-            audioEngine={audioEngine}
-            showInspector={showInspector}
-          />
-        );
       default:
         return <VisualizerMode audioEngine={audioEngine} showInspector={showInspector} />;
     }
@@ -192,18 +243,16 @@ function App() {
     <div className="flex flex-col h-screen bg-dark-main" onClick={handleFirstInteraction}>
       <Navbar activeMode={activeMode} onModeChange={setActiveMode} />
 
-      {/* El piano y los controles de transposición solo se muestran en el modo editor */}
       {activeMode === 'editor' && (
         <>
           <div className="piano-header-container">
             <PianoDisplay chord={activeChord} transpositionOffset={transpositionOffset} />
           </div>
-          {/* Controles de transposición con nuevo estilo Neón Terminal */}
           <div className="transposition-controls-group">
             <button className="terminal-button" onClick={handleTransposeDown}>⯆</button>
             <div 
               ref={displayRef}
-              className="terminal-button active" // El display ahora parece un botón activo
+              className="terminal-button active"
             >
               Original
             </div>
@@ -227,6 +276,22 @@ function App() {
               accept=".chord,application/json"
               style={{ display: 'none' }}
             />
+            {/* Selector de Tonalidad */}
+            <div className="selector">
+                <label className="selector-label" htmlFor="key-select">TONALIDAD</label>
+                <select
+                    id="key-select"
+                    value={`${currentKey.key}-${currentKey.scale}`}
+                    onChange={handleKeyChange}
+                    className="selector-box"
+                >
+                    {ALL_KEYS.map(k => (
+                        <option key={`${k.key}-${k.scale}`} value={`${k.key}-${k.scale}`}>
+                            {k.key} {k.scale}
+                        </option>
+                    ))}
+                </select>
+            </div>
           </div>
         </>
       )}
@@ -247,6 +312,15 @@ function App() {
           transpositionOffset={transpositionOffset}
         />
       )}
+
+      {/* El modal de sugerencias ahora vive aquí */}
+      <DraggableModal
+        isVisible={isSuggestionModalVisible}
+        onClose={() => setSuggestionModalVisible(false)}
+        suggestions={suggestions}
+        onSuggestionClick={handleSuggestionClick}
+        activeChord={chordToReharmonize?.chord ?? null}
+      />
     </div>
   );
 }

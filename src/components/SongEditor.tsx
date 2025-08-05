@@ -5,7 +5,7 @@ import { HighlightStyle, StreamLanguage, syntaxHighlighting } from '@codemirror/
 import { tags } from '@lezer/highlight';
 import { syntaxTree } from "@codemirror/language";
 import type { AudioEngine } from '../utils/audio';
-import type { ShowInspectorFn, SequenceItem, ProcessedSong } from '../types';
+import type { ShowInspectorFn, SequenceItem } from '../types';
 import { parseChordString, formatChordName, transposeNote } from '../utils/chord-utils';
 
 const chordTokenRegex = /[A-G](b|#)?[a-zA-Z0-9#b()¹²³⁴⁵⁶⁷⁸⁹]*(\/[A-G](b|#)?)?/;
@@ -79,7 +79,7 @@ const findChordAtPosition = (tree: any, pos: number, docLength: number) => {
 };
 
 
-const chordInteractionPlugin = (audioEngine: AudioEngine, showInspector: ShowInspectorFn, transpositionOffset: number, longPressTimeoutRef: React.MutableRefObject<number | null>, clearLongPressTimeout: () => void, onChordHover: (chord: SequenceItem | null) => void) => {
+const chordInteractionPlugin = (audioEngine: AudioEngine, showInspector: ShowInspectorFn, transpositionOffset: number, longPressTimeoutRef: React.MutableRefObject<number | null>, clearLongPressTimeout: () => void, onChordHover: (chord: SequenceItem | null) => void, onReharmonizeClick: (chord: SequenceItem, callback: (newChord: SequenceItem) => void) => void, onReharmonizeSpaceClick: (lineIndex: number, charIndex: number, prevChord: SequenceItem | null, nextChord: SequenceItem | null) => void) => {
   return EditorView.domEventHandlers({
     mousedown(event, view) {
       const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
@@ -95,6 +95,12 @@ const chordInteractionPlugin = (audioEngine: AudioEngine, showInspector: ShowIns
         const parsedChord = parseChordString(transposedChordText);
         
         if (parsedChord) {
+            onReharmonizeClick(parsedChord, (newChord) => {
+              const formatted = formatChordName(newChord, { style: 'short' });
+              view.dispatch({
+                changes: { from: chordNode.from, to: chordNode.to, insert: formatted }
+              });
+            });
             audioEngine.playChord(parsedChord, 0); 
             onChordHover(parsedChord);
         } else {
@@ -130,6 +136,31 @@ const chordInteractionPlugin = (audioEngine: AudioEngine, showInspector: ShowIns
                 });
             }
         }, 700);
+      } else {
+        // Click en un espacio vacío
+        const line = view.state.doc.lineAt(pos);
+        const lineIndex = line.number - 1; // Convertir a índice base 0
+        const charIndex = pos - line.from;
+
+        const lineChords: SequenceItem[] = [];
+        syntaxTree(view.state).iterate({
+          from: line.from,
+          to: line.to,
+          enter: (node) => {
+            if (node.type.name === 'chord') {
+              const chordText = view.state.sliceDoc(node.from, node.to);
+              const parsedChord = parseChordString(chordText);
+              if (parsedChord) {
+                lineChords.push({ ...parsedChord, id: Date.now(), raw: chordText, position: node.from - line.from });
+              }
+            }
+          }
+        });
+
+        const prevChord = lineChords.filter(c => c.position! < charIndex).pop() || null;
+        const nextChord = lineChords.find(c => c.position! >= charIndex) || null;
+
+        onReharmonizeSpaceClick(lineIndex, charIndex, prevChord, nextChord);
       }
     },
     mouseleave(_event, _view) {
@@ -165,11 +196,12 @@ interface SongEditorProps {
   showInspector: ShowInspectorFn;
   onChordHover: (chord: SequenceItem | null) => void;
   transpositionOffset: number;
-  onSendToReharmonizer: (song: ProcessedSong) => void;
   onDocChange: (doc: string) => void;
+  onReharmonizeClick: (chord: SequenceItem, callback: (newChord: SequenceItem) => void) => void;
+  onReharmonizeSpaceClick: (lineIndex: number, charIndex: number, prevChord: SequenceItem | null, nextChord: SequenceItem | null) => void;
 }
 
-const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showInspector, onChordHover, transpositionOffset, onDocChange }) => {
+const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showInspector, onChordHover, transpositionOffset, onDocChange, onReharmonizeClick, onReharmonizeSpaceClick }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const longPressTimeoutRef = useRef<number | null>(null);
@@ -193,7 +225,7 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
           chordLanguage,
           syntaxHighlighting(chordHighlightStyle),
           editorTheme,
-          chordInteractionPlugin(audioEngine, showInspector, transpositionOffset, longPressTimeoutRef, clearLongPressTimeout, onChordHover),
+          chordInteractionPlugin(audioEngine, showInspector, transpositionOffset, longPressTimeoutRef, clearLongPressTimeout, onChordHover, onReharmonizeClick, onReharmonizeSpaceClick),
           cursorChordDetector(onChordHover),
         ],
       });
@@ -260,7 +292,7 @@ const SongEditor: React.FC<SongEditorProps> = ({ initialDoc, audioEngine, showIn
           chordLanguage,
           syntaxHighlighting(chordHighlightStyle),
           editorTheme,
-          chordInteractionPlugin(audioEngine, showInspector, transpositionOffset, longPressTimeoutRef, clearLongPressTimeout, onChordHover),
+          chordInteractionPlugin(audioEngine, showInspector, transpositionOffset, longPressTimeoutRef, clearLongPressTimeout, onChordHover, onReharmonizeClick, onReharmonizeSpaceClick),
           cursorChordDetector(onChordHover),
           EditorView.updateListener.of((update) => {
             if (update.docChanged && !isProgrammaticChangeRef.current) {

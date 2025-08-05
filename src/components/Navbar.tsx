@@ -1,7 +1,7 @@
 import React from 'react';
 
 // Se actualiza AppMode para incluir el nuevo modo 'editor'
-export type AppMode = 'visualizer' | 'editor' | 'reharmonizer';
+export type AppMode = 'visualizer' | 'editor';
 
 interface NavbarProps {
   activeMode: AppMode;
@@ -10,13 +10,12 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ activeMode, onModeChange }) => {
   // Se actualiza la lista de modos disponibles
-  const modes: AppMode[] = ['visualizer', 'editor', 'reharmonizer'];
+  const modes: AppMode[] = ['visualizer', 'editor'];
   
   // Se actualizan los nombres para mostrar
   const modeNames: { [key in AppMode]: string } = {
     visualizer: 'Visualizador',
     editor: 'Editor de Canciones', // Nuevo nombre para el modo unificado
-    reharmonizer: 'Rearmonizador',
   };
 
   return (
